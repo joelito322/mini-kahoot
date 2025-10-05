@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Pencil, Play, Archive, Plus } from 'lucide-react'
+import { Pencil, Play, Archive, Plus, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 interface Quiz {
@@ -79,8 +79,16 @@ export default function QuizzesPage() {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex items-center gap-4 mb-6">
+        <Link href="/dashboard">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
+          </Button>
+        </Link>
         <h1 className="text-2xl font-bold">Gestionar Quizzes</h1>
+      </div>
+      <div className="flex justify-end mb-6">
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>

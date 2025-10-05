@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
+import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 export default function Dashboard() {
@@ -34,7 +35,15 @@ export default function Dashboard() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Dashboard - {user.role === 'supervisor' ? 'Supervisor' : 'Agente'}</h1>
+      <div className="flex items-center gap-4 mb-6">
+        <Link href="/">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
+          </Button>
+        </Link>
+        <h1 className="text-2xl font-bold">Dashboard - {user.role === 'supervisor' ? 'Supervisor' : 'Agente'}</h1>
+      </div>
       {user.role === 'supervisor' ? (
         <div>
           <Link href="/quizzes">
