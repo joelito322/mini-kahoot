@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingGoogle, setLoadingGoogle] = useState(false)
   const [error, setError] = useState('')
 
   const handleLogin = async () => {
@@ -22,6 +23,19 @@ export default function LoginPage() {
       // Redirect handled by middleware
     }
     setLoading(false)
+  }
+
+  const handleGoogleLogin = async () => {
+    setLoadingGoogle(true)
+    setError('')
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`
+      }
+    })
+    if (error) setError(error.message)
+    setLoadingGoogle(false)
   }
 
   return (
@@ -47,6 +61,14 @@ export default function LoginPage() {
             {error && <p className="text-red-500">{error}</p>}
             <Button onClick={handleLogin} disabled={loading} className="w-full">
               {loading ? 'Cargando...' : 'Iniciar Sesión'}
+            </Button>
+            <div className="flex items-center space-x-2">
+              <div className="flex-1 border-t border-gray-300"></div>
+              <span className="text-gray-500">o</span>
+              <div className="flex-1 border-t border-gray-300"></div>
+            </div>
+            <Button onClick={handleGoogleLogin} disabled={loadingGoogle} variant="outline" className="w-full">
+              {loadingGoogle ? 'Cargando...' : 'Continuar con Google'}
             </Button>
             <p className="text-center">
               ¿No tienes cuenta? <Link href="/signup" className="text-blue-500">Regístrate</Link>

@@ -1,10 +1,14 @@
 -- Crear tablas para MiniKahoot Contact Center
 
+-- Tipos enumerados
+CREATE TYPE profile_role AS ENUM ('agent', 'supervisor');
+CREATE TYPE session_status AS ENUM ('lobby', 'running', 'paused', 'ended');
+
 -- Tabla profiles
 CREATE TABLE profiles (
   id uuid REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   full_name text NOT NULL,
-  role enum('agent', 'supervisor') NOT NULL,
+  role profile_role NOT NULL,
   created_at timestamptz DEFAULT now()
 );
 
@@ -42,7 +46,7 @@ CREATE TABLE sessions (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   quiz_id uuid REFERENCES quizzes(id) ON DELETE SET NULL NOT NULL,
   code text UNIQUE NOT NULL,
-  status enum('lobby', 'running', 'paused', 'ended') DEFAULT 'lobby',
+  status session_status DEFAULT 'lobby',
   current_question_id uuid REFERENCES questions(id) ON DELETE SET NULL,
   created_by uuid REFERENCES profiles(id) ON DELETE SET NULL NOT NULL,
   started_at timestamptz,
@@ -107,7 +111,7 @@ CREATE POLICY "Users can manage questions of their quizzes" ON questions FOR ALL
 
 ALTER TABLE options ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage options of their questions" ON options FOR ALL USING (
-  auth.uid() IN (SELECT q.created_by FROM questions q WHERE q.quiz_id IN (SELECT id FROM quizzes WHERE created_by = auth.uid()))
+  auth.uid() IN (SELECT created_by FROM quizzes WHERE id IN (SELECT quiz_id FROM questions WHERE id = question_id))
 );
 
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
