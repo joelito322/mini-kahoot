@@ -1,19 +1,34 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import Link from 'next/link'
 
 export default function JoinPage() {
   const [code, setCode] = useState('')
   const [alias, setAlias] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [user, setUser] = useState<any>(null)
+  const [userLoading, setUserLoading] = useState(true)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      setUserLoading(false)
+    }
+    getUser()
+    const codeParam = searchParams.get('code')
+    if (codeParam) setCode(codeParam)
+  }, [searchParams])
 
   const handleJoin = async () => {
     setLoading(true)
@@ -31,9 +46,8 @@ export default function JoinPage() {
       return
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      setError('Debes iniciar sesión para unirte.')
+      router.push(`/login?redirect=/join?code=${code}`)
       setLoading(false)
       return
     }
@@ -84,6 +98,11 @@ export default function JoinPage() {
             <Button onClick={handleJoin} disabled={loading} className="w-full">
               {loading ? 'Uniéndome...' : 'Unirme'}
             </Button>
+            {!user && (
+              <p className="text-center">
+                ¿No tienes cuenta? <Link href="/signup" className="text-blue-500">Regístrate</Link> o <Link href="/login" className="text-blue-500">Inicia sesión</Link>
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

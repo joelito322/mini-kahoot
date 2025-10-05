@@ -5,15 +5,14 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState('agent')
+  const [role, setRole] = useState('supervisor')
   const [loading, setLoading] = useState(false)
+  const [loadingGoogle, setLoadingGoogle] = useState(false)
   const [error, setError] = useState('')
 
   const handleSignup = async () => {
@@ -37,6 +36,19 @@ export default function SignupPage() {
     setLoading(false)
   }
 
+  const handleGoogleSignup = async () => {
+    setLoadingGoogle(true)
+    setError('')
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`
+      }
+    })
+    if (error) setError(error.message)
+    setLoadingGoogle(false)
+  }
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <Card className="w-full max-w-md">
@@ -45,6 +57,10 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            <div>
+              <p>Rol asignado: Supervisor</p>
+              <p className="text-sm text-gray-600">Solo los supervisores necesitan registrarse para crear y administrar salas.</p>
+            </div>
             <Input
               type="email"
               placeholder="Correo electrónico"
@@ -57,22 +73,17 @@ export default function SignupPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            <div>
-              <Label>Rol:</Label>
-              <RadioGroup value={role} onValueChange={setRole}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="agent" id="agent" />
-                  <Label htmlFor="agent">Agente</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="supervisor" id="supervisor" />
-                  <Label htmlFor="supervisor">Supervisor</Label>
-                </div>
-              </RadioGroup>
-            </div>
             {error && <p className="text-red-500">{error}</p>}
-            <Button onClick={handleSignup} disabled={loading} className="w-full">
+            <Button onClick={handleSignup} disabled={loading || !role} className="w-full">
               {loading ? 'Cargando...' : 'Registrar'}
+            </Button>
+            <div className="flex items-center space-x-2">
+              <div className="flex-1 border-t border-gray-300"></div>
+              <span className="text-gray-500">o</span>
+              <div className="flex-1 border-t border-gray-300"></div>
+            </div>
+            <Button onClick={handleGoogleSignup} disabled={loadingGoogle || !role} variant="outline" className="w-full">
+              {loadingGoogle ? 'Cargando...' : 'Continuar con Google'}
             </Button>
             <p className="text-center">
               ¿Ya tienes cuenta? <Link href="/login" className="text-blue-500">Inicia sesión</Link>

@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getSession()
 
   const { pathname } = request.nextUrl
-  const publicPaths = ['/login', '/signup', '/reset-password']
+  const publicPaths = ['/login', '/signup', '/reset-password', '/join']
 
   if (!session && !publicPaths.includes(pathname)) {
     const redirectUrl = request.nextUrl.clone()
