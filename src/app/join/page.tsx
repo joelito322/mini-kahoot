@@ -14,8 +14,7 @@ export default function JoinPage() {
   const [alias, setAlias] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [user, setUser] = useState<any>(null)
-  const [userLoading, setUserLoading] = useState(true)
+  const [user, setUser] = useState<{ id: string } | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -23,7 +22,6 @@ export default function JoinPage() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
-      setUserLoading(false)
     }
     getUser()
     const codeParam = searchParams.get('code')
@@ -53,18 +51,37 @@ export default function JoinPage() {
     }
 
     // Insert participant
-    const { error: insertError } = await supabase
+    const { data: participant, error: insertError } = await supabase
       .from('session_participants')
       .insert({
         session_id: session.id,
         user_id: user.id,
         alias,
       })
+      .select()
+      .single()
+
     if (insertError) {
       setError('Error al unirte: ' + insertError.message)
-    } else {
-      router.push(`/session/${code}`)
+      setLoading(false)
+      return
     }
+
+    // Create initial score
+    const { error: scoreError } = await supabase
+      .from('scores')
+      .insert({
+        session_id: session.id,
+        participant_id: participant.id,
+        score: 0
+      })
+
+    if (scoreError) {
+      console.error('Error creating score:', scoreError)
+      // Continue anyway as score can be created later
+    }
+
+    router.push(`/game/${code}`)
     setLoading(false)
   }
 
