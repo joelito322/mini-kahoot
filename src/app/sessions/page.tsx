@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Play, Users, Clock, Square } from 'lucide-react'
+import { Play, Users, Clock, Square, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
 interface Session {
@@ -24,10 +24,11 @@ interface Session {
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     fetchSessions()
-  }, [])
+  }, [refreshTrigger])
 
   const fetchSessions = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -49,8 +50,10 @@ export default function SessionsPage() {
       // Process participant count
       const processedSessions = data?.map(session => ({
         ...session,
-        participant_count: session.session_participants?.[0]?.count || 0
+        participant_count: session.session_participants?.[0]?.count || 0,
+        quiz: Array.isArray(session.quiz) ? session.quiz[0] || null : session.quiz
       })) || []
+      console.log('Sesiones obtenidas de BD:', processedSessions.length, processedSessions.map(s => s.id))
       setSessions(processedSessions)
     }
     setLoading(false)
@@ -75,6 +78,48 @@ export default function SessionsPage() {
       // Refresh the sessions list
       fetchSessions()
       alert('Sesión cancelada exitosamente')
+    }
+  }
+
+  const handleDeleteSession = async (sessionId: string) => {
+    const confirmMessage = '¿Estás seguro de que quieres eliminar esta sesión permanentemente? Esta acción no se puede deshacer.'
+    if (!confirm(confirmMessage)) return
+
+    console.log('Iniciando eliminación de sesión:', sessionId)
+
+    // First delete related records to avoid foreign key constraints
+    try {
+      // Delete scores first
+      console.log('Eliminando scores...')
+      const { error: scoresError } = await supabase.from('scores').delete().eq('session_id', sessionId)
+      if (scoresError) throw new Error(`Error scores: ${scoresError.message}`)
+
+      // Delete answers
+      console.log('Eliminando answers...')
+      const { error: answersError } = await supabase.from('answers').delete().eq('session_id', sessionId)
+      if (answersError) throw new Error(`Error answers: ${answersError.message}`)
+
+      // Delete session participants
+      console.log('Eliminando session participants...')
+      const { error: participantsError } = await supabase.from('session_participants').delete().eq('session_id', sessionId)
+      if (participantsError) throw new Error(`Error participants: ${participantsError.message}`)
+
+      // Finally delete the session
+      console.log('Eliminando sesión principal...')
+      const { error: sessionError } = await supabase.from('sessions').delete().eq('id', sessionId)
+      if (sessionError) throw new Error(`Error session: ${sessionError.message}`)
+
+      console.log('Eliminación completada exitosamente')
+
+      // Force a complete refresh by incrementing the trigger
+      console.log('Forzando recarga completa...')
+      setRefreshTrigger(prev => prev + 1)
+
+      alert('Sesión eliminada exitosamente')
+
+    } catch (deleteError: any) {
+      console.error('Error completo durante eliminación:', deleteError)
+      alert(`Error al eliminar: ${deleteError.message}`)
     }
   }
 
@@ -120,7 +165,18 @@ export default function SessionsPage() {
               <CardHeader>
                 <div className="flex justify-between items-start mb-2">
                   <CardTitle className="text-lg">Sesión {session.code}</CardTitle>
-                  {getStatusBadge(session.status)}
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(session.status)}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteSession(session.id)}
+                      className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      title="Eliminar sesión"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <p className="text-sm text-gray-600">{session.quiz?.title || 'Quiz eliminado'}</p>
                 {session.quiz?.category && (
