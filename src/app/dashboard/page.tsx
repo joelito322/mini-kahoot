@@ -11,10 +11,17 @@ export default function Dashboard() {
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user }, error } = await supabase.auth.getUser()
+      console.log('User from auth:', user, error)
       if (user) {
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-        setUser({ ...user, role: profile?.role })
+        const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+        console.log('Profile:', profile, profileError)
+        if (profile) {
+          setUser({ ...user, role: profile.role })
+        } else {
+          console.error('Profile not found for user', user.id)
+          // Optionally create profile
+        }
       }
       setLoading(false)
     }
