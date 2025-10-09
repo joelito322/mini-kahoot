@@ -105,7 +105,7 @@ CREATE POLICY "Users can select quizzes created by them" ON quizzes FOR SELECT U
 CREATE POLICY "Users can insert their own quizzes" ON quizzes FOR INSERT WITH CHECK (auth.uid() = created_by);
 CREATE POLICY "Users can update their own quizzes" ON quizzes FOR UPDATE USING (auth.uid() = created_by);
 
-ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage questions of their quizzes" ON questions FOR ALL USING (
   auth.uid() IN (SELECT created_by FROM quizzes WHERE id = quiz_id)
 );

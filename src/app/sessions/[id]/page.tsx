@@ -87,13 +87,7 @@ export default function SessionControlPage() {
       .from('sessions')
       .select(`
         id, code, status, current_question_id, created_at, created_by,
-        quiz:quizzes(
-          id, title,
-          questions(
-            id, text, order_index, time_limit_sec,
-            options(id, text, is_correct)
-          )
-        )
+        quiz:quizzes(id, title)
       `)
       .eq('id', sessionId)
       .single()
@@ -112,10 +106,36 @@ export default function SessionControlPage() {
       return
     }
 
-    // Process quiz - Supabase returns array for relations
-    const processedData = {
+    // Process quiz
+    let fullQuiz: Session['quiz'] = data.quiz ? {
+      ...data.quiz,
+      questions: []
+    } : null
+
+    // Fetch questions separately to avoid nested RLS issues
+    if (fullQuiz) {
+      const { data: questionsData, error: questionsError } = await supabase
+        .from('questions')
+        .select(`
+          id, text, order_index, time_limit_sec,
+          options(id, text, is_correct)
+        `)
+        .eq('quiz_id', fullQuiz.id)
+        .order('order_index', { ascending: true })
+
+      if (questionsError) {
+        alert('Error al cargar preguntas: ' + questionsError.message)
+        fullQuiz.questions = []
+      } else if (questionsData) {
+        fullQuiz.questions = questionsData
+      } else {
+        fullQuiz.questions = []
+      }
+    }
+
+    const processedData: Session = {
       ...data,
-      quiz: data.quiz ? data.quiz[0] || null : null
+      quiz: fullQuiz
     }
 
     setSession(processedData)
