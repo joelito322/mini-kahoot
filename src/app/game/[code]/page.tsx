@@ -76,7 +76,14 @@ export default function GamePage() {
 
       setSession(sessionData)
 
-      // Check if user is participating
+      // Check if user is participating (get from localStorage for multiple participants)
+      const participantId = typeof window !== 'undefined' ? localStorage.getItem('participant_id') : null
+      if (!participantId) {
+        alert('No estás inscrito en esta sesión')
+        router.push(`/join?code=${code}`)
+        return
+      }
+
       const { data: participation, error: partError } = await supabase
         .from('session_participants')
         .select(`
@@ -84,12 +91,14 @@ export default function GamePage() {
           alias,
           scores!inner(session_id, score)
         `)
+        .eq('id', participantId)
         .eq('session_id', sessionData.id)
-        .eq('user_id', user.id)
         .eq('scores.session_id', sessionData.id)
         .single()
 
       if (partError || !participation) {
+        // Clear localStorage if invalid
+        if (typeof window !== 'undefined') localStorage.removeItem('participant_id')
         alert('No estás inscrito en esta sesión')
         router.push(`/join?code=${code}`)
         return

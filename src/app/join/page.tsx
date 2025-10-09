@@ -50,7 +50,7 @@ export default function JoinPage() {
       return
     }
 
-    // Insert participant
+    // Insert participant (allow multiple joins for testing)
     const { data: participant, error: insertError } = await supabase
       .from('session_participants')
       .insert({
@@ -82,6 +82,9 @@ export default function JoinPage() {
     }
 
     router.push(`/game/${code}`)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('participant_id', participant.id)
+    }
     setLoading(false)
   }
 

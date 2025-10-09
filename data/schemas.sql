@@ -61,7 +61,7 @@ CREATE TABLE session_participants (
   user_id uuid REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   alias text NOT NULL,
   joined_at timestamptz DEFAULT now(),
-  UNIQUE(session_id, user_id)
+  UNIQUE(session_id, alias)
 );
 
 -- Tabla answers
