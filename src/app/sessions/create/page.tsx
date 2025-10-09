@@ -63,6 +63,40 @@ export default function CreateSessionPage() {
       return
     }
 
+    // Ensure user has a profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is not found
+      console.error('Error checking profile:', profileError)
+      alert('Error al verificar perfil del usuario')
+      setCreating(false)
+      return
+    }
+
+    if (!profile) {
+      // Create profile if missing
+      const { data: newProfile, error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          full_name: user.email?.split('@')[0] || 'Usuario',
+          role: 'supervisor'
+        })
+        .select()
+        .single()
+
+      if (insertError) {
+        console.error('Error creating profile:', insertError)
+        alert('Error al crear perfil del usuario')
+        setCreating(false)
+        return
+      }
+    }
+
     const sessionCode = generateSessionCode()
 
     const { data: session, error } = await supabase
@@ -78,7 +112,7 @@ export default function CreateSessionPage() {
 
     if (error) {
       console.error('Error creating session:', error)
-      alert('Error al crear la sesión')
+      alert('Error al crear la sesión: ' + error.message)
     } else {
       // Initialize scores for the creator if they want to participate
       router.push(`/sessions/${session.id}`)

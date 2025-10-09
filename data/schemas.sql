@@ -97,6 +97,7 @@ CREATE TABLE events (
 -- Políticas RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can select their own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can insert their own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update their own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 
 ALTER TABLE quizzes ENABLE ROW LEVEL SECURITY;
@@ -115,12 +116,8 @@ CREATE POLICY "Users can manage options of their questions" ON options FOR ALL U
 );
 
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can select sessions they created or joined" ON sessions FOR SELECT USING (
-  auth.uid() = created_by OR EXISTS (SELECT 1 FROM session_participants sp WHERE sp.session_id = id AND sp.user_id = auth.uid())
-);
-CREATE POLICY "Supervisors can create sessions" ON sessions FOR INSERT WITH CHECK (
-  auth.uid() IN (SELECT id FROM profiles WHERE role = 'supervisor')
-);
+CREATE POLICY "Users can select sessions they created" ON sessions FOR SELECT USING (auth.uid() = created_by);
+CREATE POLICY "Users can create sessions" ON sessions FOR INSERT WITH CHECK (true);
 CREATE POLICY "Session owners can update" ON sessions FOR UPDATE USING (auth.uid() = created_by);
 
 ALTER TABLE session_participants ENABLE ROW LEVEL SECURITY;
