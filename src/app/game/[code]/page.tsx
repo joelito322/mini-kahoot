@@ -110,7 +110,7 @@ export default function GamePage() {
         score: participation.scores?.[0]?.score || 0
       })
 
-      setupRealtimeSubscription(sessionData.id, participation.id)
+      // setupRealtimeSubscription(sessionData.id, participation.id) // Disabled due to errors
       fetchParticipants(sessionData.id)
       fetchCurrentQuestion(sessionData.id)
       setLoading(false)
@@ -118,9 +118,7 @@ export default function GamePage() {
 
     getUserAndSession()
 
-    return () => {
-      supabase.removeAllChannels()
-    }
+    // Removed realtime cleanup
   }, [code, router])
 
   const fetchParticipants = async (sessionId: string) => {
@@ -132,7 +130,7 @@ export default function GamePage() {
       `)
       .eq('session_id', sessionId)
       .eq('scores.session_id', sessionId)
-      .order('scores(score)', { ascending: false })
+      .order('id') // Simple order since scores order doesn't work
 
     if (error) {
       console.error('Error fetching participants:', error)
@@ -141,7 +139,7 @@ export default function GamePage() {
         id: p.id,
         alias: p.alias,
         score: p.scores?.[0]?.score || 0
-      })) || []
+      })).sort((a, b) => b.score - a.score) || [] // Sort by score in JS
       setParticipants(processedParticipants)
     }
   }

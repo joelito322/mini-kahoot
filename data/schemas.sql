@@ -106,6 +106,7 @@ CREATE POLICY "Users can insert their own quizzes" ON quizzes FOR INSERT WITH CH
 CREATE POLICY "Users can update their own quizzes" ON quizzes FOR UPDATE USING (auth.uid() = created_by);
 
 -- ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE options ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage questions of their quizzes" ON questions FOR ALL USING (
   auth.uid() IN (SELECT created_by FROM quizzes WHERE id = quiz_id)
 );
@@ -123,13 +124,20 @@ CREATE POLICY "Session owners can update" ON sessions FOR UPDATE USING (auth.uid
 ALTER TABLE session_participants ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can insert themselves" ON session_participants FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can select their participations" ON session_participants FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Allow select in session" ON session_participants FOR SELECT USING (true);
+CREATE POLICY "Session creators can view participants" ON session_participants FOR SELECT USING (
+  session_id IN (SELECT id FROM sessions WHERE created_by = auth.uid())
+);
 
 ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can insert their answers and select their own" ON answers FOR ALL USING (
   participant_id IN (SELECT id FROM session_participants WHERE user_id = auth.uid())
 );
+CREATE POLICY "Session creators can view answers" ON answers FOR SELECT USING (
+  session_id IN (SELECT id FROM sessions WHERE created_by = auth.uid())
+);
 
-ALTER TABLE scores ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE scores ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Session owners and participants can view scores" ON scores FOR SELECT USING (
   participant_id IN (SELECT id FROM session_participants WHERE user_id = auth.uid()) OR
   session_id IN (SELECT id FROM sessions WHERE created_by = auth.uid())

@@ -161,7 +161,7 @@ export default function SessionControlPage() {
       const processedParticipants = data?.map(p => ({
         ...p,
         score: p.scores?.[0]?.score || 0
-      })) || []
+      })).sort((a, b) => a.alias.localeCompare(b.alias)) || [] // Simple sort by alias
       setParticipants(processedParticipants)
     }
   }
