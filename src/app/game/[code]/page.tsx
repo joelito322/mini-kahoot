@@ -296,11 +296,12 @@ export default function GamePage() {
         schema: 'public',
         table: 'scores',
         filter: `session_id=eq.${sessionId}`
-      }, (payload: any) => {
+      }, (payload: unknown) => {
         fetchParticipants(sessionId)
         // Check if it's my score
-        if (payload.new && payload.new.participant_id === participantId) {
-          setMyParticipation(current => ({ ...current!, score: payload.new.score }))
+        const p = payload as { new?: Record<string, any> }
+        if (p.new && p.new.participant_id === participantId) {
+          setMyParticipation(current => ({ ...current!, score: p.new?.score }))
         }
       })
       .subscribe()
