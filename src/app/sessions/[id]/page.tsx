@@ -504,9 +504,9 @@ export default function SessionControlPage() {
               <div className="text-center py-8">
                 <h3 className="text-xl font-semibold text-green-600 mb-4">¡Sesión Finalizada!</h3>
                 <p className="text-gray-600 mb-4">Todos los participantes han completado el quiz</p>
-                <Button onClick={() => router.push(`/reports?sessionId=${sessionId}`)}>
-                  Ver Reportes
-                </Button>
+              <Button onClick={() => router.push(`/reports/${sessionId}`)}>
+                Ver Reportes
+              </Button>
               </div>
             )}
           </CardContent>
