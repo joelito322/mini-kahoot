@@ -124,7 +124,7 @@ export default function SessionControlPage() {
 
     // Process quiz with questions
     const quizData = data.quiz ? data.quiz[0] || data.quiz : null
-    let fullQuiz: Session['quiz'] = quizData ? {
+    const fullQuiz: Session['quiz'] = quizData ? {
       ...quizData,
       questions: []
     } : null
@@ -248,9 +248,10 @@ export default function SessionControlPage() {
         schema: 'public',
         table: 'sessions',
         filter: `id=eq.${sessionId}`
-      }, (payload: any) => {
-        if (payload.new) {
-          setSession(current => ({ ...current!, ...payload.new }))
+      }, (payload: unknown) => {
+        const p = payload as { new?: Record<string, unknown> }
+        if (p.new) {
+          setSession(current => ({ ...current!, ...p.new }))
         }
       })
       .subscribe()
@@ -263,7 +264,7 @@ export default function SessionControlPage() {
         schema: 'public',
         table: 'session_participants',
         filter: `session_id=eq.${sessionId}`
-      }, (_payload: any) => {
+      }, () => {
         fetchParticipants()
       })
       .subscribe()
@@ -276,8 +277,9 @@ export default function SessionControlPage() {
         schema: 'public',
         table: 'session_participants',
         filter: `session_id=eq.${sessionId}`
-      }, (payload: any) => {
-        console.log('New participant joined:', payload.new.alias)
+      }, (payload: unknown) => {
+        const p = payload as { new?: Record<string, unknown> }
+        console.log('New participant joined:', p.new?.alias)
         fetchParticipants()
       })
       .subscribe()
@@ -290,7 +292,7 @@ export default function SessionControlPage() {
         schema: 'public',
         table: 'scores',
         filter: `session_id=eq.${sessionId}`
-      }, (_payload: any) => {
+      }, () => {
         fetchParticipants()
       })
       .subscribe()
@@ -303,7 +305,7 @@ export default function SessionControlPage() {
         schema: 'public',
         table: 'answers',
         filter: `session_id=eq.${sessionId}`
-      }, (_payload: any) => {
+      }, () => {
         if (currentQuestion) {
           fetchCurrentQuestion()
         }
