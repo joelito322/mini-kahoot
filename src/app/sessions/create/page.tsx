@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,7 @@ interface Quiz {
   archived: boolean
 }
 
-export default function CreateSessionPage() {
+function CreateSessionForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const quizId = searchParams.get('quizId')
@@ -180,5 +180,13 @@ export default function CreateSessionPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function CreateSessionPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div>Loading...</div></div>}>
+      <CreateSessionForm />
+    </Suspense>
   )
 }

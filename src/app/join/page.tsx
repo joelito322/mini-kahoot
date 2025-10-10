@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 
-export default function JoinPage() {
+function JoinForm() {
   const [code, setCode] = useState('')
   const [alias, setAlias] = useState('')
   const [loading, setLoading] = useState(false)
@@ -127,5 +127,13 @@ export default function JoinPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-gray-50"><div>Loading...</div></div>}>
+      <JoinForm />
+    </Suspense>
   )
 }
