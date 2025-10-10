@@ -9,10 +9,10 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Trophy, Clock, Target, Medal, Users, TrendingUp, Zap } from 'lucide-react'
 
 interface Session {
-
   id: string
   code: string
   quiz: {
+    id: string
     title: string
   } | null
 }
@@ -70,7 +70,7 @@ export default function SessionReportPage() {
         .select(`
           id,
           code,
-          quiz:quizzes(title)
+          quiz_id
         `)
         .eq('id', sessionId)
         .single()
@@ -81,67 +81,91 @@ export default function SessionReportPage() {
         return
       }
 
+      // Get quiz info
+      const { data: quizData } = await supabase
+        .from('quizzes')
+        .select('id, title')
+        .eq('id', sessionData.quiz_id)
+        .single()
+
       const processedSession: Session = {
-        ...sessionData,
-        quiz: sessionData.quiz ? (Array.isArray(sessionData.quiz) ? sessionData.quiz[0] : sessionData.quiz) : null
+        id: sessionData.id,
+        code: sessionData.code,
+        quiz: quizData || null
       }
       setSession(processedSession)
 
-      // 2. Get all answers with question details and user info
-      const { data: answers, error: answersError } = await supabase
-        .from('answers')
-        .select(`
-          time_ms,
-          score_value:scores!inner(score),
-          question:questions(id, text, time_limit_sec),
-          participant:session_participants(id, alias, user_id),
-          option:options(is_correct)
-        `)
-        .eq('session_id', sessionId)
+      // 2. Get all data separately to avoid complex joins
+      const [{ data: answers, error: answersError }, { data: scores }, { data: questions }, { data: participants }] =
+        await Promise.all([
+          supabase.from('answers').select('time_ms, question_id, participant_id, option_id').eq('session_id', sessionId),
+          supabase.from('scores').select('participant_id, score').eq('session_id', sessionId),
+          supabase.from('questions').select('id, text, time_limit_sec').eq('quiz_id', processedSession.quiz?.id),
+          supabase.from('session_participants').select('id, alias, user_id').eq('session_id', sessionId)
+        ])
 
       if (answersError) {
         console.error('Error fetching answers:', answersError)
         return
       }
 
-      // Process answers to get participant stats
-      const participantMap = new Map<string, ParticipantStats>()
-      const questionMap = new Map<string, QuestionStats>()
+      // Get all options for the questions in this quiz
+      const quizQuestions = questions || []
+      const questionIds = quizQuestions.map(q => q.id)
 
-      answers?.forEach((answer: any) => {
-        const participantId = answer.participant.id
-        const participantAlias = answer.participant.alias
-        const questionId = answer.question.id
-        const questionText = answer.question.text
-        const timeMs = answer.time_ms || 0
-        const isCorrect = answer.option.is_correct
-        const scoreValue = answer.score_value?.score || 0
+      const { data: allOptions } = questionIds.length > 0 ?
+        await supabase.from('options').select('id, question_id, is_correct').in('question_id', questionIds) :
+        { data: [] }
 
-        // Update participant stats
-        if (!participantMap.has(participantId)) {
-          participantMap.set(participantId, {
-            id: participantId,
-            alias: participantAlias,
-            totalScore: 0,
+      // Create lookup maps
+      const scoreMap = new Map(scores?.map(s => [s.participant_id, s.score]) || [])
+      const questionMapById = new Map(quizQuestions.map(q => [q.id, q]))
+      const participantMapById = new Map(participants?.map(p => [p.id, p]) || [])
+      const optionMapById = new Map(allOptions?.map(o => [o.id, o.is_correct]) || [])
+
+      console.log('Report data:', {
+        answers: answers?.length,
+        scores: scores?.length,
+        questions: quizQuestions.length,
+        participants: participants?.length,
+        options: allOptions?.length
+      })
+
+      // Process answers to calculate stats
+      const participantStatsMap = new Map<string, ParticipantStats>()
+      const questionStatsMap = new Map<string, QuestionStats>()
+
+      answers?.forEach(answer => {
+        const participant = participantMapById.get(answer.participant_id)
+        const question = questionMapById.get(answer.question_id)
+        const isCorrect = optionMapById.get(answer.option_id) || false
+
+        if (!participant || !question) return
+
+        // Participant stats
+        if (!participantStatsMap.has(answer.participant_id)) {
+          const score = scoreMap.get(answer.participant_id) || 0
+          participantStatsMap.set(answer.participant_id, {
+            id: answer.participant_id,
+            alias: participant.alias,
+            totalScore: score,
             totalTime: 0,
             correctAnswers: 0,
             averageTimePerQuestion: 0
           })
         }
 
-        const participantStats = participantMap.get(participantId)!
-        participantStats.totalScore += scoreValue
-
+        const participantStats = participantStatsMap.get(answer.participant_id)!
         if (isCorrect) {
-          participantStats.correctAnswers += scoreValue > 0 ? 1 : 0
-          participantStats.totalTime += timeMs
+          participantStats.correctAnswers += 1
+          participantStats.totalTime += answer.time_ms || 0
         }
 
-        // Update question stats
-        if (!questionMap.has(questionId)) {
-          questionMap.set(questionId, {
-            questionId,
-            questionText,
+        // Question stats
+        if (!questionStatsMap.has(answer.question_id)) {
+          questionStatsMap.set(answer.question_id, {
+            questionId: answer.question_id,
+            questionText: question.text,
             correctAnswers: 0,
             totalAnswers: 0,
             correctPercentage: 0,
@@ -149,34 +173,35 @@ export default function SessionReportPage() {
           })
         }
 
-        const questionStats = questionMap.get(questionId)!
-        questionMap.set(questionId, {
-          ...questionStats,
-          totalAnswers: questionStats.totalAnswers + 1,
-          averageTime: questionStats.averageTime + (isCorrect ? timeMs / questionStats.totalAnswers : 0),
-          correctAnswers: questionStats.correctAnswers + (isCorrect ? 1 : 0)
-        })
+        const questionStats = questionStatsMap.get(answer.question_id)!
+        questionStats.totalAnswers += 1
+        if (isCorrect) {
+          questionStats.correctAnswers += 1
+          questionStats.averageTime += answer.time_ms || 0
+        }
       })
 
-      // Calculate final stats
-      const participantsArray = Array.from(participantMap.values())
+      // Calculate final percentages and rankings
+      const participantsArray = Array.from(participantStatsMap.values())
         .map(p => ({
           ...p,
           averageTimePerQuestion: p.correctAnswers > 0 ? Math.round(p.totalTime / p.correctAnswers) : 0
         }))
         .sort((a, b) => {
-          // Sort by totalScore DESC, then by totalTime ASC (faster is better)
+          // First by score desc, then by time asc
           if (a.totalScore !== b.totalScore) {
             return b.totalScore - a.totalScore
           }
           return a.totalTime - b.totalTime
         })
 
-      const questionsArray = Array.from(questionMap.values()).map(q => ({
-        ...q,
-        correctPercentage: q.totalAnswers > 0 ? Math.round((q.correctAnswers / q.totalAnswers) * 100) : 0,
-        averageTime: q.totalAnswers > 0 ? Math.round(q.averageTime / q.totalAnswers) : 0
-      })).sort((a, b) => a.questionText.localeCompare(b.questionText))
+      const questionsArray = Array.from(questionStatsMap.values())
+        .map(q => ({
+          ...q,
+          correctPercentage: q.totalAnswers > 0 ? Math.round((q.correctAnswers / q.totalAnswers) * 100) : 0,
+          averageTime: q.correctAnswers > 0 ? Math.round(q.averageTime / q.correctAnswers) : 0
+        }))
+        .sort((a, b) => a.questionText.localeCompare(b.questionText))
 
       // Calculate overall stats
       const totalScore = participantsArray.reduce((sum, p) => sum + p.totalScore, 0)
