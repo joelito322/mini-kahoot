@@ -180,7 +180,7 @@ export default function GamePage() {
         id: p.id,
         alias: p.alias,
         score: p.scores?.[0]?.score || 0
-      })).sort((a, b) => b.score - a.score) || [] // Sort by score in JS
+      })).sort((a, b) => (b.score !== a.score ? b.score - a.score : a.alias.localeCompare(b.alias))) || [] // Sort by score DESC, then alias ASC
       setParticipants(processedParticipants)
     }
   }
@@ -518,7 +518,7 @@ export default function GamePage() {
                 {participants.length > 1 && (
                   <div>
                     <p className="text-lg">Posición final:</p>
-                    <p className="text-xl font-semibold">{getRankingText()}</p>
+                    <p className="text-xl font-semibold">Recarga la página para ver tu posición final</p>
                   </div>
                 )}
               </div>

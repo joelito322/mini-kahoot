@@ -76,6 +76,22 @@ export default function SessionControlPage() {
     }
   }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Polling backup for participants updates when realtime fails
+  useEffect(() => {
+    if (!session?.id || session?.status !== 'running') return
+
+    console.log('Setting up polling backup for participants during session')
+    const polling = setInterval(async () => {
+      try {
+        await fetchParticipants()
+      } catch (error) {
+        console.error('Polling error:', error)
+      }
+    }, 3000)
+
+    return () => clearInterval(polling)
+  }, [session?.id, session?.status]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const fetchSession = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -239,13 +255,40 @@ export default function SessionControlPage() {
       })
       .subscribe()
 
-    // Subscribe to participant updates
+    // Subscribe to participant updates (existing participants, score changes)
     supabase
       .channel('participant-updates')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'session_participants',
+        filter: `session_id=eq.${sessionId}`
+      }, (_payload: any) => {
+        fetchParticipants()
+      })
+      .subscribe()
+
+    // Subscribe to new participant joins
+    supabase
+      .channel('participant-joins')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'session_participants',
+        filter: `session_id=eq.${sessionId}`
+      }, (payload: any) => {
+        console.log('New participant joined:', payload.new.alias)
+        fetchParticipants()
+      })
+      .subscribe()
+
+    // Subscribe to scores updates (in case scores change)
+    supabase
+      .channel('scores-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'scores',
         filter: `session_id=eq.${sessionId}`
       }, (_payload: any) => {
         fetchParticipants()
