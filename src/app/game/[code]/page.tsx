@@ -128,6 +128,36 @@ export default function GamePage() {
     // Removed realtime cleanup
   }, [code, router])
 
+  // Polling como respaldo para session updates cuando realtime falla
+  useEffect(() => {
+    if (!session?.id) return
+
+    console.log('Starting polling backup for session:', session.id)
+    const polling = setInterval(async () => {
+      try {
+        const { data: latestSession } = await supabase
+          .from('sessions')
+          .select('id, status, current_question_id')
+          .eq('id', session.id)
+          .single()
+
+        if (latestSession && latestSession.status !== session.status) {
+          console.log('Polling detected status change:', latestSession.status, 'was:', session.status)
+          setSession(current => ({ ...current!, ...latestSession }))
+
+          if (latestSession.status === 'running' && latestSession.current_question_id) {
+            console.log('Polling fetching question:', latestSession.current_question_id)
+            fetchCurrentQuestionById(latestSession.current_question_id)
+          }
+        }
+      } catch (error) {
+        console.error('Polling error:', error)
+      }
+    }, 3000)
+
+    return () => clearInterval(polling)
+  }, [session?.id, session?.status])
+
   const fetchParticipants = async (sessionId: string) => {
     const { data, error } = await supabase
       .from('session_participants')
@@ -184,6 +214,32 @@ export default function GamePage() {
     }
   }
 
+  const fetchCurrentQuestionById = async (questionId: string) => {
+    console.log('fetchCurrentQuestionById called with ID:', questionId)
+
+    const { data, error } = await supabase
+      .from('questions')
+      .select(`
+        id, text, time_limit_sec,
+        options(id, text)
+      `)
+      .eq('id', questionId)
+      .single()
+
+    console.log('Fetch by ID result:', data, 'error:', error)
+    if (error) {
+      console.error('Error fetching current question by ID:', error)
+      setQuestion(null)
+    } else {
+      console.log('Setting current question by ID:', data.text)
+      setQuestion(data)
+      setTimeRemaining(data.time_limit_sec)
+      setAnswered(false)
+      setSelectedOption(null)
+      startTimer(data.time_limit_sec)
+    }
+  }
+
   const setupRealtimeSubscription = (sessionId: string, participantId: string) => {
     // Subscribe to session updates
     supabase
@@ -195,13 +251,14 @@ export default function GamePage() {
         filter: `id=eq.${sessionId}`
       }, (payload: any) => {
         if (payload.new) {
-          console.log('Session update:', payload.new.status, payload.new.current_question_id)
+          console.log('Session realtime update:', payload.new.status, payload.new.current_question_id)
           const newSession = payload.new as Session
           setSession(current => ({ ...current!, ...newSession }))
 
-          // Check if question changed or session ended
-          if (payload.new.current_question_id !== session?.current_question_id) {
-            fetchCurrentQuestion(sessionId)
+          // If there's a new question ID (session started), fetch it immediately
+          if (payload.new.current_question_id) {
+            console.log('New question detected, fetching:', payload.new.current_question_id)
+            fetchCurrentQuestionById(payload.new.current_question_id)
           }
         }
       })
