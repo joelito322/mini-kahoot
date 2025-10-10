@@ -143,11 +143,16 @@ export default function EditQuizPage() {
         return
       }
 
-      // Update options
-      const optionsToUpdate = questionForm.options.map((opt, index) => ({
-        ...opt,
-        question_id: editingQuestion.id
-      }))
+      // Update options - we need to match with existing options to get IDs
+      const existingOptions = editingQuestion.options
+      const optionsToUpdate = questionForm.options.map((opt, index) => {
+        const existingOption = existingOptions[index]
+        return {
+          ...opt,
+          id: existingOption?.id,
+          question_id: editingQuestion.id
+        }
+      })
 
       for (const option of optionsToUpdate) {
         if (option.id) {
