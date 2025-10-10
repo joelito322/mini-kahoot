@@ -81,10 +81,10 @@ export default function JoinPage() {
       // Continue anyway as score can be created later
     }
 
-    router.push(`/game/${code}`)
     if (typeof window !== 'undefined') {
-      localStorage.setItem('participant_id', participant.id)
+      sessionStorage.setItem('participant_id', participant.id)
     }
+    router.push(`/game/${code}`)
     setLoading(false)
   }
 

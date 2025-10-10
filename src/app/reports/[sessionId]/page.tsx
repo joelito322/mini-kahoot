@@ -144,11 +144,10 @@ export default function SessionReportPage() {
 
         // Participant stats
         if (!participantStatsMap.has(answer.participant_id)) {
-          const score = scoreMap.get(answer.participant_id) || 0
           participantStatsMap.set(answer.participant_id, {
             id: answer.participant_id,
             alias: participant.alias,
-            totalScore: score,
+            totalScore: 0, // Will be calculated later
             totalTime: 0,
             correctAnswers: 0,
             averageTimePerQuestion: 0
@@ -185,6 +184,7 @@ export default function SessionReportPage() {
       const participantsArray = Array.from(participantStatsMap.values())
         .map(p => ({
           ...p,
+          totalScore: p.correctAnswers * 100, // 100 points per correct answer
           averageTimePerQuestion: p.correctAnswers > 0 ? Math.round(p.totalTime / p.correctAnswers) : 0
         }))
         .sort((a, b) => {

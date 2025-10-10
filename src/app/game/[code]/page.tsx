@@ -76,8 +76,8 @@ export default function GamePage() {
 
       setSession(sessionData)
 
-      // Check if user is participating (get from localStorage for multiple participants)
-      const participantId = typeof window !== 'undefined' ? localStorage.getItem('participant_id') : null
+      // Check if user is participating (get from sessionStorage for multiple participants per tab)
+      const participantId = typeof window !== 'undefined' ? sessionStorage.getItem('participant_id') : null
       if (!participantId) {
         console.log('No participant ID, redirect to join')
         router.push(`/join?code=${code}`)
@@ -97,8 +97,8 @@ export default function GamePage() {
         .single()
 
       if (partError || !participation) {
-        // Clear localStorage if invalid
-        if (typeof window !== 'undefined') localStorage.removeItem('participant_id')
+        // Clear sessionStorage if invalid
+        if (typeof window !== 'undefined') sessionStorage.removeItem('participant_id')
         alert('No estás inscrito en esta sesión')
         router.push(`/join?code=${code}`)
         return
@@ -107,7 +107,7 @@ export default function GamePage() {
       setMyParticipation({
         id: participation.id,
         alias: participation.alias,
-        score: participation.scores?.[0]?.score || 0
+        score: 0 // Start with 0, will increment on correct answers
       })
 
       setupRealtimeSubscription(sessionData.id, participation.id)
@@ -333,6 +333,18 @@ export default function GamePage() {
 
     if (error) {
       console.error('Error submitting answer:', error)
+    } else {
+      // Check if answer was correct and update score
+      const { data: optionData } = await supabase
+        .from('options')
+        .select('is_correct')
+        .eq('id', optionId)
+        .single()
+
+      if (optionData?.is_correct) {
+        console.log('Answer was correct! Increasing score by 100')
+        setMyParticipation(prev => prev ? { ...prev, score: prev.score + 100 } : prev)
+      }
     }
   }
 
