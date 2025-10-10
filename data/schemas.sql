@@ -111,10 +111,10 @@ CREATE POLICY "Users can manage questions of their quizzes" ON questions FOR ALL
   auth.uid() IN (SELECT created_by FROM quizzes WHERE id = quiz_id)
 );
 
-ALTER TABLE options ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can manage options of their questions" ON options FOR ALL USING (
-  auth.uid() IN (SELECT created_by FROM quizzes WHERE id IN (SELECT quiz_id FROM questions WHERE id = question_id))
-);
+-- ALTER TABLE options ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY "Users can manage options of their questions" ON options FOR ALL USING (
+--   auth.uid() IN (SELECT created_by FROM quizzes WHERE id IN (SELECT quiz_id FROM questions WHERE id = question_id))
+-- );
 
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can select sessions they created" ON sessions FOR SELECT USING (auth.uid() = created_by);
@@ -129,13 +129,13 @@ CREATE POLICY "Session creators can view participants" ON session_participants F
   session_id IN (SELECT id FROM sessions WHERE created_by = auth.uid())
 );
 
-ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can insert their answers and select their own" ON answers FOR ALL USING (
-  participant_id IN (SELECT id FROM session_participants WHERE user_id = auth.uid())
-);
-CREATE POLICY "Session creators can view answers" ON answers FOR SELECT USING (
-  session_id IN (SELECT id FROM sessions WHERE created_by = auth.uid())
-);
+-- ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY "Users can insert their answers and select their own" ON answers FOR ALL USING (
+--   participant_id IN (SELECT id FROM session_participants WHERE user_id = auth.uid())
+-- );
+-- CREATE POLICY "Session creators can view answers" ON answers FOR SELECT USING (
+--   session_id IN (SELECT id FROM sessions WHERE created_by = auth.uid())
+-- );
 
 -- ALTER TABLE scores ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Session owners and participants can view scores" ON scores FOR SELECT USING (

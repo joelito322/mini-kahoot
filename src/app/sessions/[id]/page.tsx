@@ -106,14 +106,16 @@ export default function SessionControlPage() {
       return
     }
 
-    // Process quiz
-    let fullQuiz: Session['quiz'] = data.quiz ? {
-      ...data.quiz,
+    // Process quiz with questions
+    const quizData = data.quiz ? data.quiz[0] || data.quiz : null
+    let fullQuiz: Session['quiz'] = quizData ? {
+      ...quizData,
       questions: []
     } : null
 
-    // Fetch questions separately to avoid nested RLS issues
+    // Fetch questions separately
     if (fullQuiz) {
+      console.log('Fetching questions for quiz:', fullQuiz.id)
       const { data: questionsData, error: questionsError } = await supabase
         .from('questions')
         .select(`
@@ -123,13 +125,14 @@ export default function SessionControlPage() {
         .eq('quiz_id', fullQuiz.id)
         .order('order_index', { ascending: true })
 
+      console.log('Questions result:', questionsData?.length || 0, 'questions')
+
       if (questionsError) {
-        alert('Error al cargar preguntas: ' + questionsError.message)
+        console.error('Questions error:', questionsError.message)
+        alert('Error cargando preguntas: ' + questionsError.message)
         fullQuiz.questions = []
-      } else if (questionsData) {
-        fullQuiz.questions = questionsData
       } else {
-        fullQuiz.questions = []
+        fullQuiz.questions = questionsData || []
       }
     }
 
@@ -167,7 +170,9 @@ export default function SessionControlPage() {
   }
 
   const fetchCurrentQuestion = async () => {
+    console.log('fetchCurrentQuestion called, current_question_id:', session?.current_question_id)
     if (!session?.current_question_id) {
+      console.log('No current_question_id, skipping fetch')
       setCurrentQuestion(null)
       return
     }
@@ -182,13 +187,39 @@ export default function SessionControlPage() {
       .eq('id', session.current_question_id)
       .single()
 
+    console.log('Fetch current question result:', data, 'error:', error)
     if (error) {
       console.error('Error fetching current question:', error)
     } else {
+      console.log('Setting current question:', data.text)
       setCurrentQuestion(data)
       if (session.status === 'running') {
         startTimer(data.time_limit_sec)
       }
+    }
+  }
+
+  const fetchCurrentQuestionById = async (questionId: string) => {
+    console.log('fetchCurrentQuestionById called with ID:', questionId)
+
+    const { data, error } = await supabase
+      .from('questions')
+      .select(`
+        id, text, time_limit_sec,
+        options(id, text, is_correct),
+        answers(participant_id, option_id, time_ms)
+      `)
+      .eq('id', questionId)
+      .single()
+
+    console.log('Fetch by ID result:', data, 'error:', error)
+    if (error) {
+      console.error('Error fetching current question by ID:', error)
+      setCurrentQuestion(null)
+    } else {
+      console.log('Setting current question by ID:', data.text)
+      setCurrentQuestion(data)
+      startTimer(data.time_limit_sec) // Always start timer when starting session
     }
   }
 
@@ -251,19 +282,39 @@ export default function SessionControlPage() {
   }
 
   const handleStartSession = async () => {
+    alert('Questions in quiz: ' + session?.quiz?.questions?.length)
     if (!session?.quiz?.questions.length) {
       alert('No hay preguntas en este quiz')
       return
     }
 
     const firstQuestion = session.quiz.questions[0]
-    await supabase
+    console.log('Starting session, first question ID:', firstQuestion?.id)
+    if (!firstQuestion?.id) {
+      alert('Error: primera pregunta no tiene ID')
+      return
+    }
+
+    const { data, error } = await supabase
       .from('sessions')
       .update({ status: 'running', current_question_id: firstQuestion.id, started_at: new Date().toISOString() })
       .eq('id', sessionId)
+      .select('current_question_id, status')
+      .single()
 
-    setSession(current => ({ ...current!, status: 'running', current_question_id: firstQuestion.id }))
-    fetchCurrentQuestion()
+    if (error) {
+      console.error('Error updating session:', error)
+      alert('Error iniciando sesión')
+      return
+    }
+
+    console.log('Session updated successfully:', data)
+    setSession(current => current ? { ...current, status: data.status, current_question_id: data.current_question_id } : current)
+
+    // Fetch current question using the confirmed ID from DB
+    if (data.current_question_id) {
+      fetchCurrentQuestionById(data.current_question_id)
+    }
   }
 
   const handleNextQuestion = async () => {

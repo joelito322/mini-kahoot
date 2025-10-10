@@ -79,7 +79,7 @@ export default function GamePage() {
       // Check if user is participating (get from localStorage for multiple participants)
       const participantId = typeof window !== 'undefined' ? localStorage.getItem('participant_id') : null
       if (!participantId) {
-        alert('No estás inscrito en esta sesión')
+        console.log('No participant ID, redirect to join')
         router.push(`/join?code=${code}`)
         return
       }
@@ -110,7 +110,14 @@ export default function GamePage() {
         score: participation.scores?.[0]?.score || 0
       })
 
-      // setupRealtimeSubscription(sessionData.id, participation.id) // Disabled due to errors
+      setupRealtimeSubscription(sessionData.id, participation.id)
+
+      if (sessionData.status === 'running' && sessionData.current_question_id) {
+        console.log('Initial question load:', sessionData.current_question_id)
+        fetchCurrentQuestion(sessionData.id)
+      } else {
+        console.log('Initial status not running or no question')
+      }
       fetchParticipants(sessionData.id)
       fetchCurrentQuestion(sessionData.id)
       setLoading(false)
@@ -145,7 +152,9 @@ export default function GamePage() {
   }
 
   const fetchCurrentQuestion = async (sessionId: string) => {
+    console.log('fetchCurrentQuestion called with id:', session?.current_question_id)
     if (!session?.current_question_id) {
+      console.log('No current question id')
       setQuestion(null)
       setTimeRemaining(null)
       setAnswered(false)
@@ -164,7 +173,9 @@ export default function GamePage() {
 
     if (error) {
       console.error('Error fetching question:', error)
+      setQuestion(null)
     } else {
+      console.log('Question loaded:', data.text)
       setQuestion(data)
       setTimeRemaining(data.time_limit_sec)
       setAnswered(false)
@@ -184,6 +195,7 @@ export default function GamePage() {
         filter: `id=eq.${sessionId}`
       }, (payload: any) => {
         if (payload.new) {
+          console.log('Session update:', payload.new.status, payload.new.current_question_id)
           const newSession = payload.new as Session
           setSession(current => ({ ...current!, ...newSession }))
 
@@ -323,6 +335,16 @@ export default function GamePage() {
               <h2 className="text-2xl font-bold mb-2">Esperando que comience la sesión</h2>
               <p className="text-gray-600 mb-4">La partida comenzará pronto. ¡Prepárate!</p>
               <Badge variant="secondary">{participants.length} participantes conectados</Badge>
+            </CardContent>
+          </Card>
+        )}
+
+        {session.status === 'running' && !question && (
+          <Card className="text-center py-12">
+            <CardContent>
+              <Users className="w-16 h-16 mx-auto mb-4 text-blue-600" />
+              <h2 className="text-2xl font-bold mb-2">Cargando pregunta...</h2>
+              <p className="text-gray-600 mb-4">Por favor recarga la página si la pregunta no aparece.</p>
             </CardContent>
           </Card>
         )}
