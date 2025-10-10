@@ -253,16 +253,23 @@ export default function GamePage() {
         schema: 'public',
         table: 'sessions',
         filter: `id=eq.${sessionId}`
-      }, (payload: any) => {
-        if (payload.new) {
-          console.log('Session realtime update:', payload.new.status, payload.new.current_question_id)
-          const newSession = payload.new as Session
-          setSession(current => ({ ...current!, ...newSession }))
+      }, (payload: unknown) => {
+        const p = payload as { new?: Record<string, unknown> }
+        if (p.new) {
+          console.log('Session realtime update:', p.new.status, p.new.current_question_id)
+          setSession(current => {
+            const updated = { ...current! } as Session
+            if (typeof p.new?.status === 'string') updated.status = p.new.status
+            if (typeof p.new?.current_question_id === 'string' || p.new?.current_question_id === null) {
+              updated.current_question_id = p.new.current_question_id as string | null
+            }
+            return updated
+          })
 
           // If there's a new question ID (session started), fetch it immediately
-          if (payload.new.current_question_id) {
-            console.log('New question detected, fetching:', payload.new.current_question_id)
-            fetchCurrentQuestionById(payload.new.current_question_id)
+          if (p.new && typeof p.new.current_question_id === 'string') {
+            console.log('New question detected, fetching:', p.new.current_question_id)
+            fetchCurrentQuestionById(p.new.current_question_id)
           }
         }
       })

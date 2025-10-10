@@ -117,9 +117,10 @@ export default function SessionsPage() {
 
       alert('Sesión eliminada exitosamente')
 
-    } catch (deleteError: any) {
+    } catch (deleteError: unknown) {
       console.error('Error completo durante eliminación:', deleteError)
-      alert(`Error al eliminar: ${deleteError.message}`)
+      const error = deleteError as { message: string }
+      alert(`Error al eliminar: ${error.message}`)
     }
   }
 
