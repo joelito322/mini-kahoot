@@ -299,9 +299,12 @@ export default function GamePage() {
       }, (payload: unknown) => {
         fetchParticipants(sessionId)
         // Check if it's my score
-        const p = payload as { new?: Record<string, any> }
-        if (p.new && p.new.participant_id === participantId) {
-          setMyParticipation(current => ({ ...current!, score: p.new?.score }))
+        const p = payload as { new?: Record<string, unknown> }
+        if (p.new && typeof p.new.participant_id === 'string' && p.new.participant_id === participantId) {
+          const score = p.new.score
+          if (typeof score === 'number') {
+            setMyParticipation(current => ({ ...current!, score }))
+          }
         }
       })
       .subscribe()
