@@ -141,12 +141,16 @@ export default function GamePage() {
           .eq('id', session.id)
           .single()
 
-        if (latestSession && latestSession.status !== session.status) {
-          console.log('Polling detected status change:', latestSession.status, 'was:', session.status)
+        if (latestSession &&
+           (latestSession.status !== session.status || latestSession.current_question_id !== session.current_question_id)) {
+          console.log('Polling detected change:', {
+            status: {new: latestSession.status, old: session.status},
+            question_id: {new: latestSession.current_question_id, old: session.current_question_id}
+          })
           setSession(current => ({ ...current!, ...latestSession }))
 
-          if (latestSession.status === 'running' && latestSession.current_question_id) {
-            console.log('Polling fetching question:', latestSession.current_question_id)
+          if (latestSession.current_question_id && latestSession.current_question_id !== session.current_question_id) {
+            console.log('Polling fetching new question:', latestSession.current_question_id)
             fetchCurrentQuestionById(latestSession.current_question_id)
           }
         }
@@ -156,7 +160,7 @@ export default function GamePage() {
     }, 3000)
 
     return () => clearInterval(polling)
-  }, [session?.id, session?.status])
+  }, [session?.id, session?.status, session?.current_question_id])
 
   const fetchParticipants = async (sessionId: string) => {
     const { data, error } = await supabase
