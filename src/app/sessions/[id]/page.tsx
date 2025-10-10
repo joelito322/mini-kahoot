@@ -323,6 +323,8 @@ export default function SessionControlPage() {
     const currentIndex = session.quiz.questions.findIndex(q => q.id === currentQuestion?.id)
     const nextIndex = currentIndex + 1
 
+    console.log('Next question: currentIndex', currentIndex, 'nextIndex', nextIndex, 'total questions', session.quiz.questions.length)
+
     if (nextIndex >= session.quiz.questions.length) {
       // End session
       await supabase
@@ -332,12 +334,15 @@ export default function SessionControlPage() {
       setSession(current => ({ ...current!, status: 'ended', current_question_id: null }))
     } else {
       const nextQuestion = session.quiz.questions[nextIndex]
+      console.log('Moving to next question:', nextQuestion.id, nextQuestion.text)
       await supabase
         .from('sessions')
         .update({ current_question_id: nextQuestion.id })
         .eq('id', sessionId)
       setSession(current => ({ ...current!, current_question_id: nextQuestion.id }))
-      fetchCurrentQuestion()
+
+      // Fetch the next question immediately to avoid timing issues
+      fetchCurrentQuestionById(nextQuestion.id)
     }
   }
 

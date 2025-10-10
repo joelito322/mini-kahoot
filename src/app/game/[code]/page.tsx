@@ -343,7 +343,19 @@ export default function GamePage() {
 
       if (optionData?.is_correct) {
         console.log('Answer was correct! Increasing score by 100')
-        setMyParticipation(prev => prev ? { ...prev, score: prev.score + 100 } : prev)
+        setMyParticipation(prev => {
+          const newScore = prev ? prev.score + 100 : 100
+          // Update score in database too
+          supabase
+            .from('scores')
+            .upsert({
+              session_id: session.id,
+              participant_id: prev?.id || '',
+              score: newScore
+            })
+            .then(() => console.log('Score updated in DB'))
+          return prev ? { ...prev, score: newScore } : prev
+        })
       }
     }
   }
