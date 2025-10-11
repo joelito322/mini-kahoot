@@ -44,13 +44,15 @@ function JoinForm() {
       return
     }
 
+    // For anonymous users, insert without user_id for now
+    // TODO: Create anonymous auth or guest profile
     if (!user) {
-      router.push(`/login?redirect=/join?code=${code}`)
+      setError('Por favor inicia sesión para unirte a la sesión como supervisor. Para participantes, necesitamos implementar accesso anónimo.')
       setLoading(false)
       return
     }
 
-    // Insert participant (allow multiple joins for testing)
+    // Insert participant
     const { data: participant, error: insertError } = await supabase
       .from('session_participants')
       .insert({
