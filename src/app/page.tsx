@@ -5,11 +5,11 @@ import Link from 'next/link'
 export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
-      <h1 className="text-4xl font-bold mb-8 text-center">MiniKahoot para Contact Center</h1>
+      <h1 className="text-4xl font-bold mb-8 text-center">MiniKahoot Contact Center</h1>
       <div className="flex flex-col md:flex-row gap-6">
         <Card className="w-full max-w-80">
           <CardHeader>
-            <CardTitle>Supervisors</CardTitle>
+            <CardTitle>Supervisores</CardTitle>
           </CardHeader>
           <CardContent>
             <p>Crea quizzes y inicia sesiones para entrenar agentes.</p>
