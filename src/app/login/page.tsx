@@ -32,8 +32,9 @@ function LoginForm() {
   const handleGoogleLogin = async () => {
     setLoadingGoogle(true)
     setError('')
-    // Use production URL if available (for Netlify), otherwise fallback to window.location.origin
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
+    // Detect if we're in production (on netlify)
+    const isProduction = window.location.host.includes('netlify.app')
+    const baseUrl = isProduction ? 'https://mini-kahoot.netlify.app' : window.location.origin
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
