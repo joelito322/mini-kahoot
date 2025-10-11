@@ -38,6 +38,12 @@ interface MyParticipation {
   score: number
 }
 
+interface SessionResult {
+  final_position: number
+  final_score: number
+  alias: string
+}
+
 export default function GamePage() {
   const params = useParams()
   const router = useRouter()
@@ -52,6 +58,8 @@ export default function GamePage() {
   const [answered, setAnswered] = useState(false)
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<{ id: string } | null>(null)
+  const [finalRanking, setFinalRanking] = useState<SessionResult | null>(null)
+  const [finalRankings, setFinalRankings] = useState<SessionResult[]>([])
 
   useEffect(() => {
     const getUserAndSession = async () => {
@@ -161,6 +169,14 @@ export default function GamePage() {
 
     return () => clearInterval(polling)
   }, [session?.id, session?.status, session?.current_question_id])
+
+  // Load final rankings when session ends
+  useEffect(() => {
+    if (session?.status === 'ended' && session?.id && !finalRanking) {
+      console.log('Session ended, loading final rankings')
+      fetchFinalRankings(session.id)
+    }
+  }, [session?.status, session?.id, finalRanking])
 
   const fetchParticipants = async (sessionId: string) => {
     const { data, error } = await supabase
@@ -371,6 +387,50 @@ export default function GamePage() {
     }
   }
 
+  const fetchFinalRankings = async (sessionId: string) => {
+    try {
+      const { data: sessionResults, error } = await supabase
+        .from('session_results')
+        .select(`
+          final_position,
+          final_score,
+          session_participants!inner(alias)
+        `)
+        .eq('session_id', sessionId)
+        .order('final_position', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching final rankings:', error)
+        // Fallback: show placeholder ranking
+        setFinalRanking(null)
+        setFinalRankings([])
+        return
+      }
+
+      if (!sessionResults || sessionResults.length === 0) {
+        console.log('No final rankings found yet, session_results table is empty')
+        return
+      }
+
+      // Process rankings
+      const processedRankings = sessionResults.map((result: any) => ({
+        final_position: result.final_position,
+        final_score: result.final_score,
+        alias: result.session_participants.alias
+      }))
+
+      setFinalRankings(processedRankings)
+
+      // Find my ranking
+      const myResult = processedRankings.find(r => r.alias === myParticipation?.alias)
+      setFinalRanking(myResult || null)
+
+      console.log('Final rankings loaded:', processedRankings.length, 'participants')
+    } catch (error) {
+      console.error('Error in fetchFinalRankings:', error)
+    }
+  }
+
   const getRankingText = () => {
     if (!myParticipation || !participants.length) return ''
 
@@ -378,6 +438,14 @@ export default function GamePage() {
     if (myRank === 0) return ''
 
     return `${myRank}º lugar`
+  }
+
+  const getFinalRankingText = () => {
+    if (!finalRanking) return 'Cargando posición...'
+
+    const position = finalRanking.final_position
+    const suffix = position === 1 ? 'ro' : position === 2 ? 'do' : position === 3 ? 'ro' : 'to'
+    return `${position}º lugar`
   }
 
   if (loading || !session || !myParticipation) return (
@@ -529,11 +597,50 @@ export default function GamePage() {
                 {participants.length > 1 && (
                   <div>
                     <p className="text-lg">Posición final:</p>
-                    <p className="text-xl font-semibold">Recarga la página para ver tu posición final</p>
+                    <p className="text-xl font-semibold">{getFinalRankingText()}</p>
+                  </div>
+                )}
+
+                {/* Final Rankings Table */}
+                {finalRankings.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="text-xl font-semibold mb-4">Ranking Final</h3>
+                    <div className="space-y-2">
+                      {finalRankings.slice(0, 5).map((ranking) => {
+                        const isMe = ranking.alias === myParticipation.alias
+                        return (
+                          <div
+                            key={ranking.final_position}
+                            className={`flex justify-between items-center p-3 rounded-lg ${isMe ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Badge variant={ranking.final_position <= 3 ? 'default' : 'outline'} className="w-8 h-8 p-0 flex items-center justify-center text-sm">
+                                {ranking.final_position}
+                              </Badge>
+                              <span className={isMe ? 'font-semibold text-blue-600' : ''}>
+                                {ranking.alias}
+                              </span>
+                              {isMe && <span className="text-sm text-blue-600">(tú)</span>}
+                            </div>
+                            <span className={`font-bold ${isMe ? 'text-blue-600' : ''}`}>
+                              {ranking.final_score} pts
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
-              <Button onClick={() => router.push('/')}>Volver al inicio</Button>
+
+              <div className="flex gap-3 justify-center">
+                <Button onClick={() => router.push(`/results/${session.id}`)}>
+                  Ver Mis Resultados Finales
+                </Button>
+                <Button variant="outline" onClick={() => router.push('/')}>
+                  Nueva Sesión
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

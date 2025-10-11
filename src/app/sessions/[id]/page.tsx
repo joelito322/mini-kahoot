@@ -411,6 +411,79 @@ export default function SessionControlPage() {
     }
   }
 
+  const calculateAndSaveFinalRankings = async () => {
+    try {
+      // Get all participants with their answers and scores
+      const { data: participantsData, error: participantsError } = await supabase
+        .from('session_participants')
+        .select(`
+          id, user_id,
+          scores!inner(session_id, score),
+          answers!inner(session_id, time_ms, option:options(is_correct))
+        `)
+        .eq('session_id', sessionId)
+        .eq('scores.session_id', sessionId)
+        .eq('answers.session_id', sessionId)
+
+      if (participantsError) {
+        console.error('Error fetching participants data:', participantsError)
+        return
+      }
+
+      // Calculate final rankings
+      const rankings = participantsData.map(participant => {
+        const totalAnswers = participant.answers?.length || 0
+        const correctAnswers = participant.answers?.filter(
+          (answer: any) => answer.option?.is_correct
+        ).length || 0
+        const totalTime = participant.answers?.reduce(
+          (sum: number, answer: any) => sum + (answer.time_ms || 0), 0
+        ) || 0
+        const finalScore = participant.scores?.[0]?.score || 0
+
+        return {
+          participant_id: participant.id,
+          final_score: finalScore,
+          total_answers: totalAnswers,
+          correct_answers: correctAnswers,
+          total_time_ms: totalTime
+        }
+      })
+
+      // Sort by score DESC, then by total time ASC for ties
+      rankings.sort((a, b) => {
+        if (a.final_score !== b.final_score) {
+          return b.final_score - a.final_score
+        }
+        return a.total_time_ms - b.total_time_ms
+      })
+
+      // Assign positions and save
+      const rankingData = rankings.map((ranking, index) => ({
+        session_id: sessionId,
+        participant_id: ranking.participant_id,
+        final_position: index + 1,
+        final_score: ranking.final_score,
+        total_answers: ranking.total_answers,
+        correct_answers: ranking.correct_answers,
+        total_time_ms: ranking.total_time_ms
+      }))
+
+      const { error: insertError } = await supabase
+        .from('session_results')
+        .upsert(rankingData, { onConflict: 'session_id,participant_id' })
+
+      if (insertError) {
+        console.error('Error saving final rankings:', insertError)
+        alert('Error guardando rankings finales')
+      } else {
+        console.log('Final rankings saved successfully:', rankingData.length, 'participants')
+      }
+    } catch (error) {
+      console.error('Error calculating rankings:', error)
+    }
+  }
+
   const handleEndSession = async () => {
     if (confirm('¿Estás seguro de que quieres finalizar la sesión?')) {
       await supabase
@@ -418,6 +491,9 @@ export default function SessionControlPage() {
         .update({ status: 'ended', current_question_id: null, ended_at: new Date().toISOString() })
         .eq('id', sessionId)
       setSession(current => ({ ...current!, status: 'ended', current_question_id: null }))
+
+      // Calculate and save final rankings
+      await calculateAndSaveFinalRankings()
     }
   }
 
