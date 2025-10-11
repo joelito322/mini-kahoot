@@ -411,22 +411,105 @@ export default function SessionControlPage() {
     }
   }
 
+  const isLastQuestion = () => {
+    if (!session?.quiz?.questions || !currentQuestion) return false
+    const currentIndex = session.quiz.questions.findIndex(q => q.id === currentQuestion.id)
+    return currentIndex === session.quiz.questions.length - 1
+  }
+
   const calculateAndSaveFinalRankings = async () => {
     try {
-      // Get all participants with their answers and scores
-      const { data: participantsData, error: participantsError } = await supabase
-        .from('session_participants')
-        .select(`
-          id, user_id,
-          scores!inner(session_id, score),
-          answers!inner(session_id, time_ms, option:options(is_correct))
-        `)
+      console.log('Starting to calculate final rankings for session:', sessionId)
+
+      // First get all scores for this session to find participants who answered
+      const { data: scoresData, error: scoresError } = await supabase
+        .from('scores')
+        .select('participant_id')
         .eq('session_id', sessionId)
-        .eq('scores.session_id', sessionId)
-        .eq('answers.session_id', sessionId)
+
+      if (scoresError) {
+        console.error('Error fetching scores:', scoresError)
+        return
+      }
+
+      console.log('Found scores:', scoresData?.length)
+
+      if (!scoresData || scoresData.length === 0) {
+        console.warn('No scores found - no participants answered')
+        return
+      }
+
+      // Get unique participant IDs
+      const participantIds = Array.from(new Set(scoresData.map(s => s.participant_id)))
+
+      console.log('Unique participant IDs:', participantIds)
+
+      // Now get participant details
+      const { data: participants, error: participantsError } = await supabase
+        .from('session_participants')
+        .select('id, user_id')
+        .in('id', participantIds)
 
       if (participantsError) {
-        console.error('Error fetching participants data:', participantsError)
+        console.error('Error fetching participants:', participantsError)
+        return
+      }
+
+      console.log('Found participants:', participants?.length)
+
+      if (!participants || participants.length === 0) {
+        console.warn('No participants found')
+        return
+      }
+
+      // For each participant, get their scores and answers
+      const participantsData = []
+
+      for (const participant of participants) {
+        console.log(`Processing participant ${participant.id}`)
+
+        // Get score with error handling
+        const { data: scoreData, error: scoreError } = await supabase
+          .from('scores')
+          .select('score')
+          .eq('session_id', sessionId)
+          .eq('participant_id', participant.id)
+
+        // Some participants might not have scores yet
+        if (scoreError) {
+          console.error(`Score query failed for participant ${participant.id}:`, scoreError)
+          continue
+        }
+
+        console.log(`Score data for ${participant.id}:`, scoreData)
+
+        // Get answers
+        const { data: answersData, error: answersError } = await supabase
+          .from('answers')
+          .select('time_ms, option:options(is_correct)')
+          .eq('session_id', sessionId)
+          .eq('participant_id', participant.id)
+
+        if (answersError) {
+          console.error(`Answers query failed for participant ${participant.id}:`, answersError)
+          continue
+        }
+
+        console.log(`Answers data for ${participant.id}:`, answersData?.length, 'answers')
+
+        if (scoreData && answersData) {
+          participantsData.push({
+            ...participant,
+            scores: scoreData,
+            answers: answersData
+          })
+        }
+      }
+
+      console.log('Processed participants data:', participantsData.length)
+
+      if (participantsData.length === 0) {
+        console.warn('No participants data found after processing')
         return
       }
 
@@ -440,6 +523,8 @@ export default function SessionControlPage() {
           (sum: number, answer: any) => sum + (answer.time_ms || 0), 0
         ) || 0
         const finalScore = participant.scores?.[0]?.score || 0
+
+        console.log(`Participant ${participant.id}: ${totalAnswers} answers, ${correctAnswers} correct, ${finalScore} score, ${totalTime}ms`)
 
         return {
           participant_id: participant.id,
@@ -469,13 +554,15 @@ export default function SessionControlPage() {
         total_time_ms: ranking.total_time_ms
       }))
 
+      console.log('Ranking data to save:', rankingData)
+
       const { error: insertError } = await supabase
         .from('session_results')
         .upsert(rankingData, { onConflict: 'session_id,participant_id' })
 
       if (insertError) {
         console.error('Error saving final rankings:', insertError)
-        alert('Error guardando rankings finales')
+        alert(`Error guardando rankings finales: ${insertError.message}`)
       } else {
         console.log('Final rankings saved successfully:', rankingData.length, 'participants')
       }
@@ -486,14 +573,25 @@ export default function SessionControlPage() {
 
   const handleEndSession = async () => {
     if (confirm('¿Estás seguro de que quieres finalizar la sesión?')) {
-      await supabase
+      console.log('Ending session and calculating rankings...')
+
+      const { error: sessionError } = await supabase
         .from('sessions')
         .update({ status: 'ended', current_question_id: null, ended_at: new Date().toISOString() })
         .eq('id', sessionId)
+
+      if (sessionError) {
+        console.error('Error updating session:', sessionError)
+        alert('Error finalizando sesión')
+        return
+      }
+
       setSession(current => ({ ...current!, status: 'ended', current_question_id: null }))
 
       // Calculate and save final rankings
+      console.log('Starting rankings calculation...')
       await calculateAndSaveFinalRankings()
+      console.log('Rankings calculation completed')
     }
   }
 
@@ -606,10 +704,18 @@ export default function SessionControlPage() {
                         <Pause className="w-4 h-4 mr-2" />
                         Pausar
                       </Button>
-                      <Button onClick={handleNextQuestion}>
-                        <Play className="w-4 h-4 mr-2" />
-                        Siguiente Pregunta
-                      </Button>
+                      {!isLastQuestion() && (
+                        <Button onClick={handleNextQuestion}>
+                          <Play className="w-4 h-4 mr-2" />
+                          Siguiente Pregunta
+                        </Button>
+                      )}
+                      {isLastQuestion() && (
+                        <Button variant="destructive" onClick={handleEndSession}>
+                          <Square className="w-4 h-4 mr-2" />
+                          Finalizar Sesión
+                        </Button>
+                      )}
                     </>
                   )}
                   {session.status === 'paused' && (
@@ -618,10 +724,12 @@ export default function SessionControlPage() {
                       Reanudar
                     </Button>
                   )}
-                  <Button variant="destructive" onClick={handleEndSession}>
-                    <Square className="w-4 h-4 mr-2" />
-                    Finalizar Sesión
-                  </Button>
+                  {!isLastQuestion() && (
+                    <Button variant="destructive" onClick={handleEndSession}>
+                      <Square className="w-4 h-4 mr-2" />
+                      Finalizar Sesión
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

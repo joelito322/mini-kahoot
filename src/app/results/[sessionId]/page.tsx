@@ -59,6 +59,8 @@ export default function SessionResultsPage() {
         return
       }
 
+      console.log('Loading results for session:', sessionId)
+
       // Get session info with date
       const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
@@ -76,6 +78,8 @@ export default function SessionResultsPage() {
         alert('Sesión no encontrada')
         return
       }
+
+      console.log('Session data loaded:', sessionData)
 
       // Fix quiz type issue
       const processedSession: Session = {
@@ -104,14 +108,20 @@ export default function SessionResultsPage() {
         .order('final_position', { ascending: true })
         .limit(20) // Show top 20
 
+      console.log('Results query result:', resultsData, 'error:', resultsError)
+
       if (resultsError) {
         console.error('Error fetching results:', resultsError)
+        alert('Error cargando resultados: ' + resultsError.message)
         return
       }
 
       // Process participants data and find current user
       let myResultData: MyResult | null = null
       const processedParticipants: Participant[] = resultsData?.map((result: any) => {
+        console.log('Processing participant result:', result)
+        console.log(`User ${user.id} vs result user ${result.session_participants?.user_id}`)
+
         const participant = {
           id: result.session_participants.id,
           alias: result.session_participants.alias,
@@ -123,19 +133,19 @@ export default function SessionResultsPage() {
         }
 
         // Check if this is current user
-        if (result.session_participants.user_id === user.id) {
+        if (result.session_participants?.user_id === user.id) {
+          console.log('⚡ FOUND current user result:', participant)
           myResultData = participant as MyResult
         }
 
         return participant
       }) || []
 
+      console.log('Processed results:', processedParticipants.length, 'participants')
+      console.log('My result:', myResultData)
+
       setParticipants(processedParticipants)
       setMyResult(myResultData)
-
-      if (myResultData) {
-        setMyResult(myResultData as MyResult)
-      }
 
     } catch (error) {
       console.error('Error in fetchSessionResults:', error)
