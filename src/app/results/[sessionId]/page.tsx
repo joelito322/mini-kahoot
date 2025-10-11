@@ -11,6 +11,7 @@ import { Trophy, Medal, Target, Zap, Users, Crown, Star } from 'lucide-react'
 interface Session {
   id: string
   code: string
+  created_at: string
   quiz: {
     title: string
   } | null
@@ -58,12 +59,13 @@ export default function SessionResultsPage() {
         return
       }
 
-      // Get session info
+      // Get session info with date
       const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
         .select(`
           id,
           code,
+          created_at,
           quiz:quizzes(id, title)
         `)
         .eq('id', sessionId)
@@ -194,6 +196,43 @@ export default function SessionResultsPage() {
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto p-6 space-y-6">
+        {/* Session Info Box */}
+        <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <h2 className="text-xl font-bold mb-2">Resultados de Sesión</h2>
+              <div className="flex justify-center gap-4 mt-4">
+                <div className="bg-white/20 rounded-lg px-4 py-2">
+                  <div className="text-xs font-medium uppercase tracking-wide">Código</div>
+                  <div className="text-2xl font-bold">{session.code}</div>
+                </div>
+                <div className="bg-white/20 rounded-lg px-4 py-2">
+                  <div className="text-xs font-medium uppercase tracking-wide">Fecha</div>
+                  <div className="text-lg font-bold">
+                    {new Date(session.created_at).toLocaleDateString('es-ES', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    })}
+                  </div>
+                  <div className="text-sm opacity-90">
+                    {new Date(session.created_at).toLocaleTimeString('es-ES', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 text-sm opacity-90">
+                <div className="flex items-center justify-center gap-2">
+                  <Users className="w-4 h-4" />
+                  <span>{participants.length} participantes en esta sesión</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* My Result Card */}
         {myResult && (
           <Card className={`${getMedalColor(myResult.final_position)} border-2 animate-pulse`}>
