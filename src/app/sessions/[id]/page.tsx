@@ -500,20 +500,25 @@ export default function SessionControlPage() {
 
         let totalAnswers = answersCountData ? answersCountData.length : 0
 
-        // Get correct answers by joining with options
-        const { data: correctAnswersData, error: correctError } = await supabase
+        // Get correct answers by first getting answers with option details, then filtering
+        const { data: answersWithOptions, error: correctError } = await supabase
           .from('answers')
-          .select('time_ms', { count: 'exact' })
+          .select('time_ms, options!inner(is_correct)')
           .eq('session_id', sessionId)
           .eq('participant_id', participant.id)
-          .eq('options.is_correct', true)
 
         if (correctError) {
           console.error(`Correct answers query failed for participant ${participant.id}:`, correctError)
           // Continue with 0 correct answers
         }
 
-        let correctAnswers = correctAnswersData ? correctAnswersData.length : 0
+        // Count correct answers by filtering the results
+        let correctAnswers = 0
+        if (answersWithOptions && answersWithOptions.length > 0) {
+          correctAnswers = answersWithOptions.filter((answer: any) =>
+            answer.options && Array.isArray(answer.options) && answer.options[0]?.is_correct
+          ).length
+        }
 
         // Get total time spent
         const { data: timeData, error: timeError } = await supabase
