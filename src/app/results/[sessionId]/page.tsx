@@ -112,6 +112,9 @@ export default function SessionResultsPage() {
         return
       }
 
+      // Get participant_id from sessionStorage (set during game)
+      const participantId = typeof window !== 'undefined' ? sessionStorage.getItem('participant_id') : null
+
       // Process participants data and find current user
       let myResultData: MyResult | null = null
       const processedParticipants: Participant[] = resultsData?.map((result: any) => {
@@ -127,8 +130,12 @@ export default function SessionResultsPage() {
           total_time_ms: result.total_time_ms
         }
 
-        // Check if this is current user (only if user is authenticated)
-        if (user && result.session_participants?.user_id === user.id) {
+        // Check if this is current participant
+        // Priority: participant ID from sessionStorage > auth user ID
+        if (participantId && result.session_participants?.id === participantId) {
+          console.log('⚡ FOUND current participant result:', participant)
+          myResultData = participant as MyResult
+        } else if (user && result.session_participants?.user_id === user.id) {
           console.log('⚡ FOUND current user result:', participant)
           myResultData = participant as MyResult
         }
