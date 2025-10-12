@@ -133,7 +133,7 @@ export default function GamePage() {
     // Removed realtime cleanup
   }, [code, router])
 
-  // Polling como respaldo para session updates cuando realtime falla
+  // Polling como respaldo para session updates cuando realtime falla (especialmente para guest users)
   useEffect(() => {
     if (!session?.id) return
 
@@ -158,14 +158,20 @@ export default function GamePage() {
             console.log('Polling fetching new question:', latestSession.current_question_id)
             fetchCurrentQuestionById(latestSession.current_question_id)
           }
+
+          // If session ended, load final rankings
+          if (latestSession.status === 'ended' && !finalRanking) {
+            console.log('Session ended via polling, loading final rankings')
+            fetchFinalRankings(session.id)
+          }
         }
       } catch (error) {
         console.error('Polling error:', error)
       }
-    }, 3000)
+    }, 2000) // More frequent polling for better responsiveness
 
     return () => clearInterval(polling)
-  }, [session?.id, session?.status, session?.current_question_id])
+  }, [session?.id, session?.status, session?.current_question_id, finalRanking])
 
   // Load final rankings when session ends
   useEffect(() => {
