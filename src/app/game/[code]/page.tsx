@@ -600,66 +600,7 @@ export default function GamePage() {
           </div>
         )}
 
-        {session.status === 'ended' && (
-          <Card className="text-center py-8">
-            <CardContent>
-              <Trophy className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
-              <h2 className="text-3xl font-bold mb-4">¡Sesión Finalizada!</h2>
-              <div className="space-y-4 mb-6">
-                <div>
-                  <p className="text-xl">Tu puntuación final:</p>
-                  <p className="text-3xl font-bold text-blue-600">{myParticipation.score} puntos</p>
-                </div>
-                {participants.length > 1 && (
-                  <div>
-                    <p className="text-lg">Posición final:</p>
-                    <p className="text-xl font-semibold">{getFinalRankingText()}</p>
-                  </div>
-                )}
-
-                {/* Final Rankings Table */}
-                {finalRankings.length > 0 && (
-                  <div className="mt-8">
-                    <h3 className="text-xl font-semibold mb-4">Ranking Final</h3>
-                    <div className="space-y-2">
-                      {finalRankings.slice(0, 5).map((ranking) => {
-                        const isMe = ranking.alias === myParticipation.alias
-                        return (
-                          <div
-                            key={ranking.final_position}
-                            className={`flex justify-between items-center p-3 rounded-lg ${isMe ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'}`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <Badge variant={ranking.final_position <= 3 ? 'default' : 'outline'} className="w-8 h-8 p-0 flex items-center justify-center text-sm">
-                                {ranking.final_position}
-                              </Badge>
-                              <span className={isMe ? 'font-semibold text-blue-600' : ''}>
-                                {ranking.alias}
-                              </span>
-                              {isMe && <span className="text-sm text-blue-600">(tú)</span>}
-                            </div>
-                            <span className={`font-bold ${isMe ? 'text-blue-600' : ''}`}>
-                              {ranking.final_score} pts
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-3 justify-center">
-                <Button onClick={() => router.push(`/results/${session.id}`)}>
-                  Ver Mis Resultados Finales
-                </Button>
-                <Button variant="outline" onClick={() => router.push('/')}>
-                  Nueva Sesión
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Session ended - auto redirect handled in polling */}
       </div>
     </div>
   )
