@@ -784,14 +784,20 @@ export default function GamePage() {
                 </div>
 
                 {answered && (
-                  <div className="mt-6 p-6 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl text-center shadow-lg">
+                  <div className={`mt-6 p-6 ${question?.revealAnswers ? (selectedOption && question.options.find(opt => opt.id === selectedOption)?.is_correct ? 'bg-gradient-to-r from-green-50 to-green-100 border border-green-200' : 'bg-gradient-to-r from-red-50 to-red-100 border border-red-200') : 'bg-gradient-to-r from-green-50 to-green-100 border border-green-200'} rounded-xl text-center shadow-lg`}>
                     <div className="flex items-center justify-center gap-3">
-                      <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center animate-bounce shadow-lg">
-                        <span className="text-white text-xl font-bold">✓</span>
+                      <div className={`w-12 h-12 ${question?.revealAnswers ? (selectedOption && question.options.find(opt => opt.id === selectedOption)?.is_correct ? 'bg-green-500' : 'bg-red-500') : 'bg-green-500'} rounded-full flex items-center justify-center animate-bounce shadow-lg`}>
+                        <span className="text-white text-xl font-bold">
+                          {question?.revealAnswers ? (selectedOption && question.options.find(opt => opt.id === selectedOption)?.is_correct ? '✓' : '✗') : '✓'}
+                        </span>
                       </div>
                       <div className="text-left">
-                        <p className="text-green-800 font-bold text-xl">¡Respuesta enviada!</p>
-                        <p className="text-green-600 text-sm">Esperando a que todos respondan...</p>
+                        <p className={`${question?.revealAnswers ? (selectedOption && question.options.find(opt => opt.id === selectedOption)?.is_correct ? 'text-green-800' : 'text-red-800') : 'text-green-800'} font-bold text-xl`}>
+                          {question?.revealAnswers ? (selectedOption && question.options.find(opt => opt.id === selectedOption)?.is_correct ? '¡Respuesta correcta!' : 'Respuesta incorrecta') : '¡Respuesta enviada!'}
+                        </p>
+                        <p className={`${question?.revealAnswers ? (selectedOption && question.options.find(opt => opt.id === selectedOption)?.is_correct ? 'text-green-600' : 'text-red-600') : 'text-green-600'} text-sm`}>
+                          {question?.revealAnswers ? 'Tiempo terminado' : 'Esperando a que todos respondan...'}
+                        </p>
                       </div>
                     </div>
                   </div>
