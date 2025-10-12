@@ -64,10 +64,7 @@ export default function GamePage() {
   useEffect(() => {
     const getUserAndSession = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
+      // User is optional for public sessions - set if exists
       setUser(user)
 
       const { data: sessionData, error: sessionError } = await supabase
