@@ -770,36 +770,7 @@ export default function GamePage() {
               </CardContent>
             </Card>
 
-            {/* Ranking Preview */}
-            {participants.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Trophy className="w-5 h-5" />
-                    Ranking Actual
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {participants.slice(0, 5).map((participant, index) => (
-                      <div key={participant.id} className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                          <Badge variant={index < 3 ? 'default' : 'outline'} className="w-6 h-6 p-0 flex items-center justify-center text-xs">
-                            {index + 1}
-                          </Badge>
-                          <span className={participant.id === myParticipation.id ? 'font-semibold' : ''}>
-                            {participant.alias}
-                          </span>
-                        </div>
-                        <span className={participant.id === myParticipation.id ? 'font-semibold' : ''}>
-                          {participant.score} pts
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+
           </div>
         )}
 
