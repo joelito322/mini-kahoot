@@ -119,7 +119,7 @@ CREATE POLICY "Users can manage questions of their quizzes" ON questions FOR ALL
 
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can select sessions they created" ON sessions FOR SELECT USING (auth.uid() = created_by);
-CREATE POLICY "Anyone can find sessions by code to join" ON sessions FOR SELECT USING (status IN ('lobby', 'running'));
+CREATE POLICY "Public can view active sessions" ON sessions FOR SELECT USING (status IN ('lobby', 'running', 'paused', 'ended'));
 CREATE POLICY "Users can create sessions" ON sessions FOR INSERT WITH CHECK (true);
 CREATE POLICY "Session owners can update" ON sessions FOR UPDATE USING (auth.uid() = created_by);
 
@@ -139,6 +139,11 @@ CREATE POLICY "Session creators can view participants" ON session_participants F
 -- CREATE POLICY "Session creators can view answers" ON answers FOR SELECT USING (
 --   session_id IN (SELECT id FROM sessions WHERE created_by = auth.uid())
 -- );
+
+ALTER TABLE session_results ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can view session results" ON session_results FOR SELECT USING (
+  session_id IN (SELECT id FROM sessions WHERE status = 'ended')
+);
 
 ALTER TABLE scores ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public can view scores in active sessions" ON scores FOR SELECT USING (

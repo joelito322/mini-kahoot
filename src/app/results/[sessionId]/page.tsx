@@ -52,12 +52,8 @@ export default function SessionResultsPage() {
 
   const fetchSessionResults = async () => {
     try {
-      // Get current user
+      // Try to get current user (optional for public results)
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
 
       console.log('Loading results for session:', sessionId)
 
@@ -120,7 +116,6 @@ export default function SessionResultsPage() {
       let myResultData: MyResult | null = null
       const processedParticipants: Participant[] = resultsData?.map((result: any) => {
         console.log('Processing participant result:', result)
-        console.log(`User ${user.id} vs result user ${result.session_participants?.user_id}`)
 
         const participant = {
           id: result.session_participants.id,
@@ -132,8 +127,8 @@ export default function SessionResultsPage() {
           total_time_ms: result.total_time_ms
         }
 
-        // Check if this is current user
-        if (result.session_participants?.user_id === user.id) {
+        // Check if this is current user (only if user is authenticated)
+        if (user && result.session_participants?.user_id === user.id) {
           console.log('⚡ FOUND current user result:', participant)
           myResultData = participant as MyResult
         }
