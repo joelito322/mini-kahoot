@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Play, Pause, Square, Users, Clock, Trophy } from 'lucide-react'
+import { ArrowLeft, Play, Pause, Square, Users, Clock, Trophy, Copy, Check } from 'lucide-react'
 import Link from 'next/link'
 
 interface Session {
@@ -67,6 +67,7 @@ export default function SessionControlPage() {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [isHost, setIsHost] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     fetchSession()
@@ -651,6 +652,20 @@ export default function SessionControlPage() {
     }
   }
 
+  const copyToClipboard = async () => {
+    if (!session?.code) return
+
+    try {
+      await navigator.clipboard.writeText(session.code)
+      setCopied(true)
+      // Reset the copied state after 2 seconds
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy text: ', err)
+      alert('No se pudo copiar el código. Intenta de nuevo.')
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       lobby: { label: 'Esperando', variant: 'secondary' as const },
@@ -768,11 +783,33 @@ export default function SessionControlPage() {
             {session.status === 'lobby' && (
               <div className="text-center py-8">
                 <p className="text-gray-600 mb-4">Esperando participantes en el lobby</p>
-                <p className="text-3xl font-bold text-blue-600 mb-6">{session.code}</p>
-                <Button onClick={handleStartSession} size="lg">
-                  <Play className="w-5 h-5 mr-2" />
-                  Iniciar Juego
-                </Button>
+                <div className="flex flex-col items-center gap-4 mb-6">
+                  <div className="flex items-center gap-3 bg-blue-50 px-6 py-3 rounded-lg border border-blue-200">
+                    <span className="text-3xl font-bold text-blue-600">{session.code}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyToClipboard}
+                      className="bg-white hover:bg-blue-50 border-blue-300"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-4 h-4 mr-2 text-green-600" />
+                          <span className="text-green-600">Copiado!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copiar Código
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <Button onClick={handleStartSession} size="lg">
+                    <Play className="w-5 h-5 mr-2" />
+                    Iniciar Juego
+                  </Button>
+                </div>
               </div>
             )}
 
