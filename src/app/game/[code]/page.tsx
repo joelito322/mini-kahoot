@@ -161,10 +161,11 @@ export default function GamePage() {
             fetchCurrentQuestionById(latestSession.current_question_id)
           }
 
-          // Session ended - don'et redirect, just update status
+          // Session ended - redirect directly to results
           if (latestSession.status === 'ended') {
-            console.log('⚠️ SESSION ENDED')
-            // Polk no redirect, let user click button when ready
+            console.log('⚠️ SESSION ENDED - Redirecting to results')
+            router.push(`/results/${session.id}`)
+            return
           }
         }
       } catch (error) {

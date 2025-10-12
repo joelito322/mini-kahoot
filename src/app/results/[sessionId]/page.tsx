@@ -210,37 +210,95 @@ export default function SessionResultsPage() {
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto p-6 space-y-6">
+        {/* Congratulations Banner - Personal Stats */}
+        {myResult && (
+          <Card className={`${getMedalColor(myResult.final_position)} border-2 animate-pulse`}>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-6xl mb-4">{getMedalIcon(myResult.final_position)}</div>
+                <h2 className="text-3xl font-bold mb-2">¡Felicitaciones {myResult.alias}!</h2>
+                <p className="text-lg mb-4">
+                  Terminaste en {' '}
+                  <span className="font-bold">{myResult.final_position}º lugar</span> {' '}
+                  con{' '}
+                  <span className="font-bold">{myResult.final_score} puntos</span>
+                </p>
+
+                {/* Session Info */}
+                <div className="mt-4 mb-6 flex justify-center gap-4">
+                  <div className="bg-white/20 rounded-lg px-4 py-2">
+                    <div className="text-xs font-medium uppercase tracking-wide">Sala</div>
+                    <div className="text-xl font-bold">{session.code}</div>
+                  </div>
+                  <div className="bg-white/20 rounded-lg px-4 py-2">
+                    <div className="text-xs font-medium uppercase tracking-wide">Fecha</div>
+                    <div className="text-lg font-bold">
+                      {new Date(session.created_at).toLocaleDateString('es-ES', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-4 mt-6 text-sm">
+                  <div className="bg-white/50 rounded-lg p-3">
+                    <Target className="w-6 h-6 mx-auto mb-1 text-green-600" />
+                    <div className="font-semibold text-green-600">Correctas</div>
+                    <div className="text-lg font-bold">
+                      {myResult.correct_answers}/{myResult.total_answers}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {myResult.total_answers ? Math.round((myResult.correct_answers / myResult.total_answers) * 100) : 0}%
+                    </div>
+                  </div>
+
+                  <div className="bg-white/50 rounded-lg p-3">
+                    <Zap className="w-6 h-6 mx-auto mb-1 text-purple-600" />
+                    <div className="font-semibold text-purple-600">Velocidad</div>
+                    <div className="text-lg font-bold">{formatTime(myResult.total_time_ms)}</div>
+                    <div className="text-xs text-gray-600">tiempo total</div>
+                  </div>
+
+                  <div className="bg-white/50 rounded-lg p-3">
+                    <Star className="w-6 h-6 mx-auto mb-1 text-yellow-600" />
+                    <div className="font-semibold text-yellow-600">Puntuación</div>
+                    <div className="text-lg font-bold">{myResult.final_score}</div>
+                    <div className="text-xs text-gray-600">puntos finales</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Session Info Box */}
         <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
           <CardContent className="pt-6">
             <div className="text-center">
-              <h2 className="text-xl font-bold mb-2">Resultados de Sesión</h2>
+              <h2 className="text-xl font-bold mb-2">
+                {myResult ? '¡Sesión Finalizada!' : 'Resultados de Sesión'}
+              </h2>
               <div className="flex justify-center gap-4 mt-4">
                 <div className="bg-white/20 rounded-lg px-4 py-2">
-                  <div className="text-xs font-medium uppercase tracking-wide">Código</div>
-                  <div className="text-2xl font-bold">{session.code}</div>
+                  <div className="text-xs font-medium uppercase tracking-wide">
+                    {myResult ? 'Preguntas' : 'Código'}
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {myResult ? `${myResult.total_answers}` : session.code}
+                  </div>
                 </div>
                 <div className="bg-white/20 rounded-lg px-4 py-2">
-                  <div className="text-xs font-medium uppercase tracking-wide">Fecha</div>
-                  <div className="text-lg font-bold">
-                    {new Date(session.created_at).toLocaleDateString('es-ES', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric'
-                    })}
-                  </div>
-                  <div className="text-sm opacity-90">
-                    {new Date(session.created_at).toLocaleTimeString('es-ES', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </div>
+                  <div className="text-xs font-medium uppercase tracking-wide">Participantes</div>
+                  <div className="text-lg font-bold">{participants.length}</div>
                 </div>
               </div>
               <div className="mt-4 text-sm opacity-90">
                 <div className="flex items-center justify-center gap-2">
                   <Users className="w-4 h-4" />
-                  <span>{participants.length} participantes en esta sesión</span>
+                  <span>Sesión completada exitosamente</span>
                 </div>
               </div>
             </div>
