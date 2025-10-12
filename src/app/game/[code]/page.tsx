@@ -392,6 +392,8 @@ export default function GamePage() {
               session_id: session.id,
               participant_id: prev?.id || '',
               score: newScore
+            }, {
+              onConflict: 'session_id,participant_id'
             })
             .then(() => console.log('Score updated in DB'))
           return prev ? { ...prev, score: newScore } : prev
