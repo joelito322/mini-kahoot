@@ -584,9 +584,7 @@ export default function GamePage() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="font-semibold">{myParticipation.score} pts</p>
-              {participants.length > 1 && (
-                <p className="text-xs text-gray-600">{getRankingText()}</p>
-              )}
+              <p className="text-xs text-gray-600">{getRankingText()}</p>
             </div>
             {session.status === 'running' && timeRemaining !== null && timeRemaining > 0 && (
               <Badge variant={timeRemaining <= 5 ? 'destructive' : 'default'} className="text-lg px-3 py-1">
@@ -677,7 +675,7 @@ export default function GamePage() {
             </Card>
 
             {/* Ranking Preview */}
-            {participants.length > 1 && (
+            {participants.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
