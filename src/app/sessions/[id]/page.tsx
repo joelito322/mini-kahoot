@@ -558,25 +558,16 @@ export default function SessionControlPage() {
         return
       }
 
-      // Calculate final rankings
+      // Calculate final rankings using pre-computed stats
       const rankings = participantsData.map(participant => {
-        const totalAnswers = participant.answers?.length || 0
-        const correctAnswers = participant.answers?.filter(
-          (answer: any) => answer.option?.is_correct
-        ).length || 0
-        const totalTime = participant.answers?.reduce(
-          (sum: number, answer: any) => sum + (answer.time_ms || 0), 0
-        ) || 0
-        const finalScore = participant.scores?.[0]?.score || 0
-
-        console.log(`Participant ${participant.id}: ${totalAnswers} answers, ${correctAnswers} correct, ${finalScore} score, ${totalTime}ms`)
+        console.log(`Participant ${participant.id}: ${participant.total_answers} answers, ${participant.correct_answers} correct, ${participant.final_score} score, ${participant.total_time_ms}ms total`)
 
         return {
           participant_id: participant.id,
-          final_score: finalScore,
-          total_answers: totalAnswers,
-          correct_answers: correctAnswers,
-          total_time_ms: totalTime
+          final_score: participant.final_score,
+          total_answers: participant.total_answers,
+          correct_answers: participant.correct_answers,
+          total_time_ms: participant.total_time_ms
         }
       })
 
