@@ -245,14 +245,7 @@ export default function Dashboard() {
                     <div className="text-xs text-gray-500">Ahora</div>
                   </div>
 
-                  <div className="text-center pt-4">
-                    <p className="text-gray-500 text-sm">¡Empieza creando tu primer quiz para entrenar agentes!</p>
-                    <Link href="/quizzes/create">
-                      <Button className="mt-3" variant="outline">
-                        Crear Mi Primer Quiz
-                      </Button>
-                    </Link>
-                  </div>
+
                 </div>
               </CardContent>
             </Card>

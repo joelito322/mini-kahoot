@@ -44,6 +44,75 @@ interface SessionResult {
   alias: string
 }
 
+// Component for game option buttons with unique icons
+function GameOptionButton({ option, index, answered, selectedOption, onSelect }: {
+  option: { id: string; text: string };
+  index: number;
+  answered: boolean;
+  selectedOption: string | null;
+  onSelect: (optionId: string) => void;
+}) {
+  const icons = [
+    '⬤', // Circle - Option A
+    '◆',  // Square - Option B
+    '▲',  // Triangle - Option C
+    '◈'   // Diamond - Option D
+  ]
+
+  const colors = [
+    'from-red-500 to-red-600',     // Red gradient for A
+    'from-blue-500 to-blue-600',   // Blue gradient for B
+    'from-green-500 to-green-600',  // Green gradient for C
+    'from-purple-500 to-purple-600' // Purple gradient for D
+  ]
+
+  const isSelected = selectedOption === option.id
+  const icon = icons[index] || '❓'
+  const colorClass = colors[index] || 'from-gray-500 to-gray-600'
+
+  return (
+    <Card
+      key={option.id}
+      className={`group cursor-pointer transition-all duration-300 border-0 shadow-md hover:shadow-lg
+        ${answered
+          ? (isSelected ? 'bg-blue-50 border-blue-500 shadow-blue-100' : 'bg-gray-50 border-gray-200')
+          : isSelected ? 'bg-blue-50 border-blue-300 shadow-blue-100' : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
+        }
+        ${!answered ? 'hover:scale-105 hover:rotate-1' : ''}
+      `}
+      onClick={() => !answered && onSelect(option.id)}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center gap-4 w-full">
+          {/* Icon Badge */}
+          <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${colorClass}
+            flex items-center justify-center text-white text-lg font-bold shadow-lg group-hover:scale-110 transition-transform`}>
+            {icon}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <p className={`font-semibold text-base transition-colors ${
+              answered
+                ? isSelected ? 'text-blue-700' : 'text-gray-700'
+                : isSelected ? 'text-blue-700' : 'text-gray-800 group-hover:text-blue-600'
+            }`}>
+              {option.text}
+            </p>
+          </div>
+
+          {/* Selection Indicator */}
+          {isSelected && (
+            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center animate-bounce">
+              <span className="text-white text-sm font-bold">✓</span>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function GamePage() {
   const params = useParams()
   const router = useRouter()
@@ -553,38 +622,55 @@ export default function GamePage() {
         )}
 
         {session.status === 'running' && question && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Question */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-center text-xl">{question.text}</CardTitle>
+            <Card className="shadow-xl border-0 bg-white">
+              <CardHeader className="pb-6">
+                <div className="text-center space-y-2">
+                  <CardTitle className="text-gray-800 text-3xl font-bold leading-tight">
+                    {question.text}
+                  </CardTitle>
+                  <div className="flex justify-center items-center gap-2">
+                    <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-1000 ease-linear ${
+                          timeRemaining && timeRemaining <= 5 ? 'bg-gradient-to-r from-red-500 to-red-600' : ''
+                        }`}
+                        style={{ width: answered ? '100%' : `${((question.time_limit_sec - (timeRemaining || 0)) / question.time_limit_sec) * 100}%` }}
+                      ></div>
+                    </div>
+                    <Badge variant={timeRemaining && timeRemaining <= 5 ? 'destructive' : 'default'} className="text-sm px-3 py-1">
+                      <Clock className="w-4 h-4 mr-1" />
+                      {timeRemaining}s
+                    </Badge>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {question.options.map((option) => (
-                    <Button
+              <CardContent className="px-6 pb-8">
+                <div className="grid gap-6 md:grid-cols-2">
+                  {question.options.map((option, index) => (
+                    <GameOptionButton
                       key={option.id}
-                      variant={
-                        answered
-                          ? (selectedOption === option.id
-                            ? 'default'
-                            : 'outline')
-                          : selectedOption === option.id
-                            ? 'default'
-                            : 'outline'
-                      }
-                      disabled={answered}
-                      onClick={() => handleAnswerSelect(option.id)}
-                      className="h-auto p-4 text-left justify-start"
-                    >
-                      <span>{option.text}</span>
-                    </Button>
+                      option={option}
+                      index={index}
+                      answered={answered}
+                      selectedOption={selectedOption}
+                      onSelect={handleAnswerSelect}
+                    />
                   ))}
                 </div>
 
                 {answered && (
-                  <div className="mt-4 p-4 bg-green-50 rounded-lg text-center">
-                    <p className="text-green-800 font-semibold">¡Respuesta enviada!</p>
+                  <div className="mt-6 p-6 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl text-center shadow-lg">
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center animate-bounce shadow-lg">
+                        <span className="text-white text-xl font-bold">✓</span>
+                      </div>
+                      <div className="text-left">
+                        <p className="text-green-800 font-bold text-xl">¡Respuesta enviada!</p>
+                        <p className="text-green-600 text-sm">Esperando a que todos respondan...</p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>

@@ -33,6 +33,68 @@ interface Option {
   is_correct: boolean
 }
 
+interface OptionCardProps {
+  option: Option
+  index: number
+  isSelected: boolean
+  onTextChange: (value: string) => void
+  onCorrectChange: (index: number) => void
+}
+
+// Component for option cards with unique icons
+function OptionCard({ option, index, isSelected, onTextChange, onCorrectChange }: OptionCardProps) {
+  const icons = [
+    '⬤', // Circle - Option A
+    '◆',  // Square - Option B
+    '▲',  // Triangle - Option C
+    '◈'   // Diamond - Option D
+  ]
+
+  const colors = [
+    'from-red-500 to-red-600',     // Red gradient for A
+    'from-blue-500 to-blue-600',   // Blue gradient for B
+    'from-green-500 to-green-600',  // Green gradient for C
+    'from-purple-500 to-purple-600' // Purple gradient for D
+  ]
+
+  const icon = icons[index] || '❓'
+  const colorClass = colors[index] || 'from-gray-500 to-gray-600'
+
+  return (
+    <div className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all duration-300 ${
+      isSelected
+        ? 'border-blue-500 bg-blue-50 shadow-md'
+        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+    }`}>
+      {/* Icon Circle */}
+      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${colorClass} flex items-center justify-center text-white text-lg font-bold shadow-lg`}>
+        {icon}
+      </div>
+
+      {/* Input and Radio */}
+      <div className="flex-1 min-w-0">
+        <Input
+          value={option.text}
+          onChange={(e) => onTextChange(e.target.value)}
+          placeholder={`Escribe la opción ${String.fromCharCode(65 + index)}`}
+          className="text-sm font-medium"
+        />
+      </div>
+
+      {/* Radio Button */}
+      <RadioGroup value={isSelected ? index.toString() : ""} onValueChange={() => onCorrectChange(index)}>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem
+            value={index.toString()}
+            id={`correct-${index}`}
+            className="w-4 h-4"
+          />
+        </div>
+      </RadioGroup>
+    </div>
+  )
+}
+
 export default function EditQuizPage() {
   const params = useParams()
   const router = useRouter()
@@ -403,33 +465,26 @@ export default function EditQuizPage() {
 
                   <div>
                     <Label>Opciones (márquela correcta)</Label>
-                    <div className="space-y-2 mt-2">
+                    <div className="space-y-3 mt-2">
                       {questionForm.options.map((option, _index) => (
-                        <div key={_index} className="flex items-center gap-2">
-                          <Input
-                            value={option.text}
-                            onChange={(e) => {
-                              const newOptions = [...questionForm.options]
-                              newOptions[_index].text = e.target.value
-                              setQuestionForm({ ...questionForm, options: newOptions })
-                            }}
-                            placeholder={`Opción ${_index + 1}`}
-                          />
-                          <RadioGroup
-                            value={questionForm.options.findIndex(o => o.is_correct).toString()}
-                            onValueChange={(value) => {
-                              const newOptions = questionForm.options.map((opt, i) => ({
-                                ...opt,
-                                is_correct: i === parseInt(value)
-                              }))
-                              setQuestionForm({ ...questionForm, options: newOptions })
-                            }}
-                          >
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value={_index.toString()} id={`correct-${_index}`} />
-                            </div>
-                          </RadioGroup>
-                        </div>
+                        <OptionCard
+                          key={_index}
+                          option={option}
+                          index={_index}
+                          isSelected={questionForm.options.findIndex(o => o.is_correct) === _index}
+                          onTextChange={(value) => {
+                            const newOptions = [...questionForm.options]
+                            newOptions[_index].text = value
+                            setQuestionForm({ ...questionForm, options: newOptions })
+                          }}
+                          onCorrectChange={(selectedIndex) => {
+                            const newOptions = questionForm.options.map((opt, i) => ({
+                              ...opt,
+                              is_correct: i === selectedIndex
+                            }))
+                            setQuestionForm({ ...questionForm, options: newOptions })
+                          }}
+                        />
                       ))}
                     </div>
                   </div>
