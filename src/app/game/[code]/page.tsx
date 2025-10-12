@@ -133,11 +133,13 @@ export default function GamePage() {
     // Removed realtime cleanup
   }, [code, router])
 
-  // Polling como respaldo para session updates cuando realtime falla (especialmente para guest users)
+  // Polling agresivo cuando realtime falla para guest users
   useEffect(() => {
     if (!session?.id) return
 
-    console.log('Starting polling backup for session:', session.id)
+    console.log('Starting aggressive polling backup for session:', session.id)
+
+    // Add special polling during time-critical moments
     const polling = setInterval(async () => {
       try {
         const { data: latestSession } = await supabase
@@ -148,30 +150,40 @@ export default function GamePage() {
 
         if (latestSession &&
            (latestSession.status !== session.status || latestSession.current_question_id !== session.current_question_id)) {
-          console.log('Polling detected change:', {
+          console.log('🚨 POLLING DETECTED CHANGE:', {
             status: {new: latestSession.status, old: session.status},
             question_id: {new: latestSession.current_question_id, old: session.current_question_id}
           })
           setSession(current => ({ ...current!, ...latestSession }))
 
           if (latestSession.current_question_id && latestSession.current_question_id !== session.current_question_id) {
-            console.log('Polling fetching new question:', latestSession.current_question_id)
+            console.log('Fetching new question:', latestSession.current_question_id)
             fetchCurrentQuestionById(latestSession.current_question_id)
           }
 
-          // If session ended, load final rankings
-          if (latestSession.status === 'ended' && !finalRanking) {
-            console.log('Session ended via polling, loading final rankings')
-            fetchFinalRankings(session.id)
+          // Critical: All participants redirect when session ends
+          if (latestSession.status === 'ended') {
+            console.log('⚠️ SESSION ENDED - Redirecting to results')
+            // Force redirect to results page
+            router.push(`/results/${session.id}`)
+            return
           }
         }
       } catch (error) {
         console.error('Polling error:', error)
       }
-    }, 2000) // More frequent polling for better responsiveness
+    }, 1500) // Very frequent polling
 
     return () => clearInterval(polling)
-  }, [session?.id, session?.status, session?.current_question_id, finalRanking])
+  }, [session?.id, session?.status, session?.current_question_id, router])
+
+  // Load final rankings when session ends
+  useEffect(() => {
+    if (session?.status === 'ended' && session?.id && !finalRanking) {
+      console.log('Session ended, loading final rankings')
+      fetchFinalRankings(session.id)
+    }
+  }, [session?.status, session?.id, finalRanking])
 
   // Load final rankings when session ends
   useEffect(() => {
