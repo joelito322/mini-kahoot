@@ -500,25 +500,37 @@ export default function SessionControlPage() {
 
         let totalAnswers = answersCountData ? answersCountData.length : 0
 
-        // Get correct answers by first getting answers with option details, then filtering
-        const { data: answersWithOptions, error: correctError } = await supabase
+        // Get correct answers by counting answers with correct options
+        // Better approach: get the answer count and join with options in memory
+        const { data: participantAnswers, error: correctError } = await supabase
           .from('answers')
-          .select('time_ms, options!inner(is_correct)')
+          .select('option_id')
           .eq('session_id', sessionId)
           .eq('participant_id', participant.id)
 
         if (correctError) {
           console.error(`Correct answers query failed for participant ${participant.id}:`, correctError)
-          // Continue with 0 correct answers
         }
 
-        // Count correct answers by filtering the results
+        // Now check how many of those option_ids are correct
         let correctAnswers = 0
-        if (answersWithOptions && answersWithOptions.length > 0) {
-          correctAnswers = answersWithOptions.filter((answer: any) =>
-            answer.options && Array.isArray(answer.options) && answer.options[0]?.is_correct
-          ).length
+        if (participantAnswers && participantAnswers.length > 0) {
+          // Get the option_ids and check which are correct in a batch query
+          const optionIds = participantAnswers.map(a => a.option_id)
+          const { data: correctOptions, error: optionsError } = await supabase
+            .from('options')
+            .select('id')
+            .in('id', optionIds)
+            .eq('is_correct', true)
+
+          if (optionsError) {
+            console.error(`Options query failed for participant ${participant.id}:`, optionsError)
+          } else if (correctOptions) {
+            correctAnswers = correctOptions.length
+          }
         }
+
+        console.log(`Participant ${participant.id}: ${participantAnswers?.length || 0} total answers, ${correctAnswers} correct answers`)
 
         // Get total time spent
         const { data: timeData, error: timeError } = await supabase
