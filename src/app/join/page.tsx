@@ -44,24 +44,47 @@ function JoinForm() {
       return
     }
 
-    // For anonymous users, insert without user_id for now
-    // TODO: Create anonymous auth or guest profile
-    if (!user) {
-      setError('Por favor inicia sesión para unirte a la sesión como supervisor. Para participantes, necesitamos implementar accesso anónimo.')
-      setLoading(false)
-      return
+    // Handle guest (anonymous) users - like Kahoot style
+    let currentUser = user
+    if (!currentUser) {
+      console.log('No authenticated user, creating anonymous session...')
+      try {
+        const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
+        if (authError) {
+          console.error('Failed to create anonymous session:', authError)
+          setError('Error creando sesión temporal. Intenta registrar una cuenta.')
+          setLoading(false)
+          return
+        }
+        console.log('Anonymous session created:', authData.user?.id)
+        currentUser = authData.user
+      } catch (error) {
+        console.error('Anonymous auth failed:', error)
+        setError('Error autenticando usuario anónimo.')
+        setLoading(false)
+        return
+      }
     }
 
-    // Insert participant
+    // Insert participant (authenticated user or guest)
+    const participantData: any = {
+      session_id: session.id,
+      alias,
+      is_guest: !user // true if was anonymous, false if was authenticated
+    }
+
+    // Only add user_id if it's an authenticated user
+    if (user && currentUser?.id === user.id) {
+      participantData.user_id = user.id
+    }
+
     const { data: participant, error: insertError } = await supabase
       .from('session_participants')
-      .insert({
-        session_id: session.id,
-        user_id: user.id,
-        alias,
-      })
+      .insert(participantData)
       .select()
       .single()
+
+    console.log('Inserted participant:', participantData, 'Result:', participant, 'Error:', insertError)
 
     if (insertError) {
       setError('Error al unirte: ' + insertError.message)
@@ -120,11 +143,12 @@ function JoinForm() {
             <Button onClick={handleJoin} disabled={loading} className="w-full">
               {loading ? 'Uniéndome...' : 'Unirme'}
             </Button>
-            {!user && (
-              <p className="text-center">
-                ¿No tienes cuenta? <Link href="/signup" className="text-blue-500">Regístrate</Link> o <Link href="/login" className="text-blue-500">Inicia sesión</Link>
-              </p>
-            )}
+            <p className="text-center text-sm text-gray-600">
+              {user ?
+                'Participando como usuario registrado' :
+                '📱 Puedes unirte sin crear cuenta - sesión temporal automática'
+              }
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -54,13 +54,14 @@ CREATE TABLE sessions (
   created_at timestamptz DEFAULT now()
 );
 
--- Tabla session_participants
+-- Tabla session_participants (allow null user_id for guests)
 CREATE TABLE session_participants (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   session_id uuid REFERENCES sessions(id) ON DELETE CASCADE NOT NULL,
-  user_id uuid REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
   alias text NOT NULL,
   joined_at timestamptz DEFAULT now(),
+  is_guest boolean DEFAULT false,
   UNIQUE(session_id, alias)
 );
 
@@ -123,8 +124,10 @@ CREATE POLICY "Users can create sessions" ON sessions FOR INSERT WITH CHECK (tru
 CREATE POLICY "Session owners can update" ON sessions FOR UPDATE USING (auth.uid() = created_by);
 
 ALTER TABLE session_participants ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can insert themselves" ON session_participants FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can insert themselves" ON session_participants FOR INSERT WITH CHECK (auth.uid() = user_id AND is_guest = false);
+CREATE POLICY "Guests can insert themselves" ON session_participants FOR INSERT WITH CHECK (is_guest = true AND user_id IS NULL);
 CREATE POLICY "Users can select their participations" ON session_participants FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Guests can select their participations" ON session_participants FOR SELECT USING (is_guest = true AND user_id IS NULL);
 CREATE POLICY "Allow select in session" ON session_participants FOR SELECT USING (true);
 CREATE POLICY "Session creators can view participants" ON session_participants FOR SELECT USING (
   session_id IN (SELECT id FROM sessions WHERE created_by = auth.uid())
