@@ -486,31 +486,50 @@ export default function SessionControlPage() {
         const latestScore = scoreData && scoreData.length > 0 ? scoreData[0].score : 0
         console.log(`Latest score for participant ${participant.id}: ${latestScore}`)
 
-        // Use a more direct approach - count answers instead of complex joins
-        const { data: answersData, error: answersError } = await supabase
+        // Get total answers count directly
+        const { data: answersCountData, error: countError } = await supabase
           .from('answers')
-          .select('time_ms, options!inner(is_correct)')
+          .select('id', { count: 'exact' })
           .eq('session_id', sessionId)
           .eq('participant_id', participant.id)
 
-        if (answersError) {
-          console.error(`Answers query failed for participant ${participant.id}:`, answersError)
+        if (countError) {
+          console.error(`Answers count failed for participant ${participant.id}:`, countError)
           continue
         }
 
-        console.log(`Found ${answersData?.length} answers for ${participant.id}`)
+        let totalAnswers = answersCountData ? answersCountData.length : 0
 
-        // Calculate stats manually
-        let totalAnswers = answersData ? answersData.length : 0
-        let correctAnswers = 0
+        // Get correct answers by joining with options
+        const { data: correctAnswersData, error: correctError } = await supabase
+          .from('answers')
+          .select('time_ms', { count: 'exact' })
+          .eq('session_id', sessionId)
+          .eq('participant_id', participant.id)
+          .eq('options.is_correct', true)
+
+        if (correctError) {
+          console.error(`Correct answers query failed for participant ${participant.id}:`, correctError)
+          // Continue with 0 correct answers
+        }
+
+        let correctAnswers = correctAnswersData ? correctAnswersData.length : 0
+
+        // Get total time spent
+        const { data: timeData, error: timeError } = await supabase
+          .from('answers')
+          .select('time_ms')
+          .eq('session_id', sessionId)
+          .eq('participant_id', participant.id)
+
+        if (timeError) {
+          console.error(`Time query failed for participant ${participant.id}:`, timeError)
+        }
+
         let totalTime = 0
-
-        if (answersData && answersData.length > 0) {
-          for (const answer of answersData) {
-            if (answer.options && Array.isArray(answer.options) && answer.options[0]?.is_correct) {
-              correctAnswers++
-            }
-            totalTime += answer.time_ms || 0
+        if (timeData && timeData.length > 0) {
+          for (const entry of timeData) {
+            totalTime += entry.time_ms || 0
           }
         }
 
@@ -519,7 +538,7 @@ export default function SessionControlPage() {
         participantsData.push({
           ...participant,
           scores: [{ score: latestScore }],
-          answers: answersData || [],
+          answers: [], // No necesitamos array completo, solo stats
           total_answers: totalAnswers,
           correct_answers: correctAnswers,
           total_time_ms: totalTime,

@@ -86,6 +86,9 @@ CREATE TABLE scores (
   last_update timestamptz DEFAULT now()
 );
 
+-- Constraint único para upsert funcionar
+ALTER TABLE scores ADD CONSTRAINT scores_unique_session_participant UNIQUE (session_id, participant_id);
+
 -- Tabla events (opcional)
 CREATE TABLE events (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -147,6 +150,12 @@ CREATE POLICY "Public can view session results" ON session_results FOR SELECT US
 
 ALTER TABLE scores ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public can view scores in active sessions" ON scores FOR SELECT USING (
+  session_id IN (SELECT id FROM sessions WHERE status IN ('lobby', 'running'))
+);
+CREATE POLICY "Public can manage scores in active sessions" ON scores FOR INSERT WITH CHECK (
+  session_id IN (SELECT id FROM sessions WHERE status IN ('lobby', 'running'))
+);
+CREATE POLICY "Public can update scores in active sessions" ON scores FOR UPDATE USING (
   session_id IN (SELECT id FROM sessions WHERE status IN ('lobby', 'running'))
 );
 CREATE POLICY "Session owners can manage scores" ON scores FOR SELECT USING (
