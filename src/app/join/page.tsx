@@ -44,38 +44,17 @@ function JoinForm() {
       return
     }
 
-    // Handle guest (anonymous) users - like Kahoot style
-    let currentUser = user
-    if (!currentUser) {
-      console.log('No authenticated user, creating anonymous session...')
-      try {
-        const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
-        if (authError) {
-          console.error('Failed to create anonymous session:', authError)
-          setError('Error creando sesión temporal. Intenta registrar una cuenta.')
-          setLoading(false)
-          return
-        }
-        console.log('Anonymous session created:', authData.user?.id)
-        currentUser = authData.user
-      } catch (error) {
-        console.error('Anonymous auth failed:', error)
-        setError('Error autenticando usuario anónimo.')
-        setLoading(false)
-        return
-      }
-    }
-
-    // Insert participant (authenticated user or guest)
+    // Insert participant directly (public guest access)
     const participantData: any = {
       session_id: session.id,
       alias,
-      is_guest: !user // true if was anonymous, false if was authenticated
+      is_guest: true
     }
 
-    // Only add user_id if it's an authenticated user
-    if (user && currentUser?.id === user.id) {
+    // Add user_id only if authenticated (optional)
+    if (user) {
       participantData.user_id = user.id
+      participantData.is_guest = false
     }
 
     const { data: participant, error: insertError } = await supabase

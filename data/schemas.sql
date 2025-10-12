@@ -124,11 +124,10 @@ CREATE POLICY "Users can create sessions" ON sessions FOR INSERT WITH CHECK (tru
 CREATE POLICY "Session owners can update" ON sessions FOR UPDATE USING (auth.uid() = created_by);
 
 ALTER TABLE session_participants ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can insert themselves" ON session_participants FOR INSERT WITH CHECK (auth.uid() = user_id AND is_guest = false);
-CREATE POLICY "Guests can insert themselves" ON session_participants FOR INSERT WITH CHECK (is_guest = true AND user_id IS NULL);
-CREATE POLICY "Users can select their participations" ON session_participants FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Guests can select their participations" ON session_participants FOR SELECT USING (is_guest = true AND user_id IS NULL);
-CREATE POLICY "Allow select in session" ON session_participants FOR SELECT USING (true);
+CREATE POLICY "Public can join active sessions" ON session_participants
+FOR INSERT WITH CHECK (session_id IN (SELECT id FROM sessions WHERE status = 'lobby'));
+CREATE POLICY "Public can view session participants" ON session_participants
+FOR SELECT USING (session_id IN (SELECT id FROM sessions WHERE status IN ('lobby', 'running')));
 CREATE POLICY "Session creators can view participants" ON session_participants FOR SELECT USING (
   session_id IN (SELECT id FROM sessions WHERE created_by = auth.uid())
 );
@@ -141,12 +140,14 @@ CREATE POLICY "Session creators can view participants" ON session_participants F
 --   session_id IN (SELECT id FROM sessions WHERE created_by = auth.uid())
 -- );
 
--- ALTER TABLE scores ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Session owners and participants can view scores" ON scores FOR SELECT USING (
-  participant_id IN (SELECT id FROM session_participants WHERE user_id = auth.uid()) OR
+ALTER TABLE scores ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can view scores in active sessions" ON scores FOR SELECT USING (
+  session_id IN (SELECT id FROM sessions WHERE status IN ('lobby', 'running'))
+);
+CREATE POLICY "Session owners can manage scores" ON scores FOR SELECT USING (
   session_id IN (SELECT id FROM sessions WHERE created_by = auth.uid())
 );
-CREATE POLICY "System can update scores" ON scores FOR INSERT WITH CHECK (true); -- Adjust if needed
+CREATE POLICY "System can update scores" ON scores FOR INSERT WITH CHECK (true);
 
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Session owners can view events" ON events FOR SELECT USING (
