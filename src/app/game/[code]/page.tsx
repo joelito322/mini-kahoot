@@ -25,6 +25,7 @@ interface Question {
     text: string
     is_correct?: boolean // Only shown at end
   }>
+  revealAnswers?: boolean // Nueva propiedad para revelar respuestas
 }
 
 interface Participant {
@@ -46,12 +47,14 @@ interface SessionResult {
 }
 
 // Component for game option buttons with unique icons
-function GameOptionButton({ option, index, answered, selectedOption, onSelect }: {
-  option: { id: string; text: string };
+function GameOptionButton({ option, index, answered, selectedOption, onSelect, isTimeUp, correctOptionId }: {
+  option: { id: string; text: string; is_correct?: boolean };
   index: number;
   answered: boolean;
   selectedOption: string | null;
   onSelect: (optionId: string) => void;
+  isTimeUp: boolean;
+  correctOptionId?: string;
 }) {
   const icons = [
     '⬤', // Circle - Option A
@@ -68,17 +71,22 @@ function GameOptionButton({ option, index, answered, selectedOption, onSelect }:
   ]
 
   const isSelected = selectedOption === option.id
+  const isCorrect = option.is_correct || false
+  const isSelectedCorrect = isSelected && isCorrect
+  const isSelectedWrong = isSelected && !isCorrect && isTimeUp
+  const isCorrectOption = option.id === correctOptionId && isTimeUp
   const icon = icons[index] || '❓'
   const colorClass = colors[index] || 'from-gray-500 to-gray-600'
 
   return (
     <Card
       key={option.id}
-      className={`group cursor-pointer transition-all duration-300 border-0 shadow-md hover:shadow-lg
+      className={`group relative cursor-pointer transition-all duration-300 border-0 shadow-md hover:shadow-lg
         ${answered
           ? (isSelected ? 'bg-blue-50 border-blue-500 shadow-blue-100' : 'bg-gray-50 border-gray-200')
           : isSelected ? 'bg-blue-50 border-blue-300 shadow-blue-100' : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
         }
+        ${isTimeUp ? (isCorrectOption ? 'ring-4 ring-green-500 bg-green-50 shadow-green-200' : isSelectedWrong ? 'ring-4 ring-red-500 bg-red-50 shadow-red-200' : '') : ''}
         ${!answered ? 'hover:scale-105 hover:rotate-1' : ''}
       `}
       onClick={() => !answered && onSelect(option.id)}
@@ -87,7 +95,8 @@ function GameOptionButton({ option, index, answered, selectedOption, onSelect }:
         <div className="flex items-center gap-4 w-full">
           {/* Icon Badge */}
           <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${colorClass}
-            flex items-center justify-center text-white text-lg font-bold shadow-lg group-hover:scale-110 transition-transform`}>
+            flex items-center justify-center text-white text-lg font-bold shadow-lg group-hover:scale-110 transition-transform
+            ${isTimeUp ? (isCorrectOption ? 'bg-gradient-to-br from-green-500 to-green-600' : isSelectedWrong ? 'bg-gradient-to-br from-red-500 to-red-600' : '') : ''}`}>
             {icon}
           </div>
 
@@ -97,15 +106,19 @@ function GameOptionButton({ option, index, answered, selectedOption, onSelect }:
               answered
                 ? isSelected ? 'text-blue-700' : 'text-gray-700'
                 : isSelected ? 'text-blue-700' : 'text-gray-800 group-hover:text-blue-600'
+            } ${
+              isTimeUp ? (isCorrectOption ? 'text-green-800 font-bold' : isSelectedWrong ? 'text-red-800 font-bold' : '') : ''
             }`}>
               {option.text}
             </p>
           </div>
 
-          {/* Selection Indicator */}
-          {isSelected && (
-            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center animate-bounce">
-              <span className="text-white text-sm font-bold">✓</span>
+          {/* Selection Indicator - Only show one check in timeup mode */}
+          {isTimeUp && (
+            <div className={`w-8 h-8 ${isSelectedCorrect ? 'bg-green-500' : isSelectedWrong ? 'bg-red-500' : isCorrectOption ? 'bg-green-500' : 'bg-gray-500'} rounded-full flex items-center justify-center animate-bounce shadow-lg`}>
+              <span className="text-white text-sm font-bold">
+                {isSelectedCorrect || isCorrectOption ? '✓' : isSelectedWrong ? '✗' : ''}
+              </span>
             </div>
           )}
         </div>
@@ -239,6 +252,16 @@ export default function GamePage() {
             fetchCurrentQuestionById(latestSession.current_question_id)
           }
 
+          // Cuando llega nueva pregunta, revelar respuestas después del tiempo límite
+          if (latestSession.current_question_id && latestSession.current_question_id !== session.current_question_id) {
+            // Esperar al tiempo límite y luego revelar respuestas
+            if (latestSession.time_limit_sec && latestSession.time_limit_sec > 0) {
+              setTimeout(() => {
+                setQuestion(current => current ? { ...current, revealAnswers: true } : current)
+              }, latestSession.time_limit_sec * 1000)
+            }
+          }
+
           // Session ended - wait for rankings to be calculated before redirect
           if (latestSession.status === 'ended') {
             console.log('⚠️ SESSION ENDED - Waiting for rankings before redirect')
@@ -356,7 +379,7 @@ export default function GamePage() {
       .from('questions')
       .select(`
         id, text, time_limit_sec,
-        options(id, text)
+        options(id, text, is_correct)
       `)
       .eq('id', questionId)
       .single()
@@ -742,16 +765,22 @@ export default function GamePage() {
               </CardHeader>
               <CardContent className="px-6 pb-8">
                 <div className="grid gap-6 md:grid-cols-2">
-                  {question.options.map((option, index) => (
-                    <GameOptionButton
-                      key={option.id}
-                      option={option}
-                      index={index}
-                      answered={answered}
-                      selectedOption={selectedOption}
-                      onSelect={handleAnswerSelect}
-                    />
-                  ))}
+                  {question.options.map((option, index) => {
+                    const isTimeUp = question.revealAnswers || false
+                    const correctOptionId = isTimeUp ? question.options.find(opt => opt.is_correct)?.id : undefined
+                    return (
+                      <GameOptionButton
+                        key={option.id}
+                        option={option}
+                        index={index}
+                        answered={answered}
+                        selectedOption={selectedOption}
+                        onSelect={handleAnswerSelect}
+                        isTimeUp={isTimeUp}
+                        correctOptionId={correctOptionId}
+                      />
+                    )
+                  })}
                 </div>
 
                 {answered && (
