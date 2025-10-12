@@ -187,13 +187,15 @@ export default function GamePage() {
 
       setupRealtimeSubscription(sessionData.id, participation.id)
 
+      // Always fetch participants, especially important for lobby state
+      fetchParticipants(sessionData.id)
+
       if (sessionData.status === 'running' && sessionData.current_question_id) {
         console.log('Initial question load:', sessionData.current_question_id)
         fetchCurrentQuestion(sessionData.id)
       } else {
         console.log('Initial status not running or no question')
       }
-      fetchParticipants(sessionData.id)
       fetchCurrentQuestion(sessionData.id)
       setLoading(false)
     }
@@ -203,15 +205,20 @@ export default function GamePage() {
     // Removed realtime cleanup
   }, [code, router])
 
-  // Polling agresivo cuando realtime falla para guest users
+  // Polling agresivo cuando realtime falla - ultra frecuente para mantener sincronización
   useEffect(() => {
     if (!session?.id) return
 
-    console.log('Starting aggressive polling backup for session:', session.id)
+    console.log('Starting ultra-aggressive polling backup for session:', session.id)
 
-    // Add special polling during time-critical moments
+    // Polling ultra frecuente: cada 500ms durante lobby, más rápido que realtime podría fallar
     const polling = setInterval(async () => {
       try {
+        // Durante lobby, también hacer polling de participantes para lista ultra rápida
+        if (session.status === 'lobby') {
+          await fetchParticipants(session.id)
+        }
+
         const { data: latestSession } = await supabase
           .from('sessions')
           .select('id, status, current_question_id, time_limit_sec')
@@ -220,7 +227,7 @@ export default function GamePage() {
 
         if (latestSession &&
            (latestSession.status !== session.status || latestSession.current_question_id !== session.current_question_id || latestSession.time_limit_sec !== session.time_limit_sec)) {
-          console.log('🚨 POLLING DETECTED CHANGE:', {
+          console.log('🚨 ULTRA POLLING DETECTED CHANGE:', {
             status: {new: latestSession.status, old: session.status},
             question_id: {new: latestSession.current_question_id, old: session.current_question_id},
             time_limit: {new: latestSession.time_limit_sec, old: session.time_limit_sec}
@@ -263,9 +270,9 @@ export default function GamePage() {
           }
         }
       } catch (error) {
-        console.error('Polling error:', error)
+        console.error('Ultra polling error:', error)
       }
-    }, 1500) // Very frequent polling
+    }, 500) // Ultra frequent polling: 500ms
 
     return () => clearInterval(polling)
   }, [session?.id, session?.status, session?.current_question_id, router])
@@ -601,14 +608,101 @@ export default function GamePage() {
       {/* Main Content */}
       <div className="max-w-4xl mx-auto p-6">
         {session.status === 'lobby' && (
-          <Card className="text-center py-12">
-            <CardContent>
-              <Users className="w-16 h-16 mx-auto mb-4 text-blue-600" />
-              <h2 className="text-2xl font-bold mb-2">Esperando que comience la sesión</h2>
-              <p className="text-gray-600 mb-4">La partida comenzará pronto. ¡Prepárate!</p>
-              <Badge variant="secondary">{participants.length} participantes conectados</Badge>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <Card className="text-center py-8">
+              <CardContent>
+                <Users className="w-16 h-16 mx-auto mb-4 text-blue-600" />
+                <h2 className="text-2xl font-bold mb-2">Esperando que comience la sesión</h2>
+                <p className="text-gray-600">La partida comenzará pronto. ¡Prepárate!</p>
+              </CardContent>
+            </Card>
+
+            {/* Lista de participantes conectados */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Participantes Conectados ({participants.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {participants.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                    <p className="text-gray-500">Nadie se ha conectado aún</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {participants.map((participant, index) => {
+                      const isMe = myParticipation && participant.id === myParticipation.id
+                      const colors = [
+                        'from-blue-500 to-blue-600',
+                        'from-green-500 to-green-600',
+                        'from-purple-500 to-purple-600',
+                        'from-red-500 to-red-600',
+                        'from-indigo-500 to-indigo-600',
+                        'from-pink-500 to-pink-600',
+                        'from-teal-500 to-teal-600',
+                        'from-orange-500 to-orange-600'
+                      ]
+                      const colorClass = colors[index % colors.length]
+
+                      return (
+                        <Card
+                          key={participant.id}
+                          className={`border-0 shadow-md transition-all duration-300 hover:shadow-lg ${
+                            isMe ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-white'
+                          }`}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                              {/* Avatar con inicial */}
+                              <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${colorClass}
+                                flex items-center justify-center text-white font-bold shadow-lg`}>
+                                {participant.alias.charAt(0).toUpperCase()}
+                              </div>
+
+                              {/* Información del participante */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className={`font-semibold truncate ${
+                                    isMe ? 'text-blue-700' : 'text-gray-800'
+                                  }`}>
+                                    {participant.alias}
+                                  </span>
+                                  {isMe && (
+                                    <Badge variant="outline" className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5">
+                                      Tú
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 mt-1">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                  <span className="text-xs text-green-600 font-medium">Conectado</span>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Mensaje animado cuando hay pocos participantes */}
+                {participants.length > 0 && participants.length < 3 && (
+                  <div className="text-center py-4 border-t border-gray-100">
+                    <div className="text-sm text-gray-500 mb-1">
+                      💡 Cuantos más participantes, más divertido será el quiz!
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      Comparta el código: <span className="font-mono font-bold text-gray-700">{session.code}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {session.status === 'running' && !question && (
