@@ -14,12 +14,16 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500 relative overflow-hidden">
-      {/* Animated background shapes */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-yellow-300/20 rounded-full animate-bounce"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-pink-400/10 rounded-full animate-spin [animation-duration:10s]"></div>
+    <div className="min-h-screen bg-gray-50 relative overflow-hidden">
+      {/* Animated background */}
+      <div className="absolute top-0 left-0 right-0 overflow-hidden" style={{ height: '70vh' }}>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-400 via-blue-500 to-cyan-400"></div>
+
+        {/* Animated background shapes */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/20 rounded-full animate-pulse"></div>
+        <div className="absolute top-1/3 -left-20 w-48 h-48 bg-cyan-300/30 rounded-full animate-bounce"></div>
+        <div className="absolute bottom-10 right-10 w-32 h-32 bg-blue-300/20 rounded-full animate-spin [animation-duration:12s]"></div>
+        <div className="absolute top-1/4 left-1/3 w-40 h-40 bg-white/15 rounded-full animate-pulse [animation-delay:1s]"></div>
       </div>
 
       {/* Sparkle effects */}
@@ -63,7 +67,7 @@ export default function Home() {
               <div className="mx-auto bg-orange-100 p-4 rounded-full w-fit mb-4 group-hover:bg-orange-200 transition-colors">
                 <Target className="w-8 h-8 text-orange-600 group-hover:scale-110 transition-transform" />
               </div>
-              <CardTitle className="text-2xl text-gray-800 mb-2">🎯 Unirme al Juego</CardTitle>
+              <CardTitle className="text-2xl text-gray-800 mb-2">Unirme al Juego</CardTitle>
               <p className="text-gray-600">Ingresa código de sala y comienza a competir</p>
             </CardHeader>
             <CardContent className="text-center">
@@ -86,7 +90,7 @@ export default function Home() {
               <div className="mx-auto bg-blue-100 p-4 rounded-full w-fit mb-4 group-hover:bg-blue-200 transition-colors">
                 <Brain className="w-8 h-8 text-blue-600 group-hover:scale-110 transition-transform" />
               </div>
-              <CardTitle className="text-2xl text-gray-800 mb-2">👨‍🏫 Soy Supervisor</CardTitle>
+              <CardTitle className="text-2xl text-gray-800 mb-2">Soy Supervisor</CardTitle>
               <p className="text-gray-600">Crea quizzes y gestiona sesiones de entrenamiento</p>
             </CardHeader>
             <CardContent className="text-center">
@@ -106,33 +110,35 @@ export default function Home() {
 
         {/* Features Grid */}
         <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 transition-all duration-1000 delay-600 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 text-center border border-white/20 hover:bg-white/20 transition-all duration-300">
-            <Zap className="w-8 h-8 text-yellow-300 mx-auto mb-4" />
-            <h3 className="text-white font-semibold text-lg mb-2">En Tiempo Real</h3>
-            <p className="text-white/80 text-sm">Preguntas sincronizadas para toda la sala</p>
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 text-center border border-blue-300/100 hover:bg-white/20 transition-all duration-300">
+            <Zap className="w-8 h-8 text-orange-400 mx-auto mb-4" />
+            <h3 className="text-gray font-semibold text-lg mb-2">En Tiempo Real</h3>
+            <p className="text-gray/80 text-sm">Preguntas sincronizadas para toda la sala</p>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 text-center border border-white/20 hover:bg-white/20 transition-all duration-300">
-            <Trophy className="w-8 h-8 text-yellow-300 mx-auto mb-4" />
-            <h3 className="text-white font-semibold text-lg mb-2">Ranking Dinámico</h3>
-            <p className="text-white/80 text-sm">Posiciones actualizadas instantáneamente</p>
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 text-center border border-blue-300/100 hover:bg-white/20 transition-all duration-300">
+            <Trophy className="w-8 h-8 text-orange-400 mx-auto mb-4" />
+            <h3 className="text-gray font-semibold text-lg mb-2">Ranking Dinámico</h3>
+            <p className="text-gray/80 text-sm">Posiciones actualizadas instantáneamente</p>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 text-center border border-white/20 hover:bg-white/20 transition-all duration-300">
-            <Users className="w-8 h-8 text-yellow-300 mx-auto mb-4" />
-            <h3 className="text-white font-semibold text-lg mb-2">Multidispositivo</h3>
-            <p className="text-white/80 text-sm">Funciona en PC, tablet y teléfono</p>
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 text-center border border-blue-300/100 hover:bg-white/20 transition-all duration-300">
+            <Users className="w-8 h-8 text-orange-400 mx-auto mb-4" />
+            <h3 className="text-gray font-semibold text-lg mb-2">Multidispositivo</h3>
+            <p className="text-gray/80 text-sm">Funciona en PC, tablet y teléfono</p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className={`text-center text-white/60 transition-all duration-1000 delay-900 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
-          <p className="text-sm mb-4">
-            Sistema de capacitación interactiva • Contact Center Training Platform
-          </p>
-          <p className="text-xs opacity-50">
-            Desarrollado para equipos de alta performance
-          </p>
+        <div className={`text-center text-gray-800 transition-all duration-1000 delay-900 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="bg-cyan-50/70 backdrop-blur-sm rounded-lg p-6 max-w-md mx-auto border border-cyan-100/50">
+            <p className="text-sm mb-4 font-medium">
+              Sistema de capacitación interactiva • Contact Center Training Platform
+            </p>
+            <p className="text-xs text-gray-600">
+              Desarrollado y compilado por Joelito 🫡😎
+            </p>
+          </div>
         </div>
       </div>
     </div>
