@@ -15,6 +15,7 @@ interface Session {
   status: string
   current_question_id: string | null
   created_at: string
+  time_limit_sec: number
   quiz: {
     id: string
     title: string
@@ -104,7 +105,7 @@ export default function SessionControlPage() {
     const { data, error } = await supabase
       .from('sessions')
       .select(`
-        id, code, status, current_question_id, created_at, created_by,
+        id, code, status, current_question_id, created_at, created_by, time_limit_sec,
         quiz:quizzes(id, title)
       `)
       .eq('id', sessionId)
@@ -237,7 +238,7 @@ export default function SessionControlPage() {
     } else {
       console.log('Setting current question by ID:', data.text)
       setCurrentQuestion(data)
-      startTimer(data.time_limit_sec) // Always start timer when starting session
+      startTimer(session!.time_limit_sec) // Always start timer when starting session
     }
   }
 

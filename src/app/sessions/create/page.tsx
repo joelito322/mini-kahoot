@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Play } from 'lucide-react'
 import Link from 'next/link'
@@ -25,6 +26,8 @@ function CreateSessionForm() {
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [timeLimit, setTimeLimit] = useState(20)
+  const [timeInputValue, setTimeInputValue] = useState("20")
 
   useEffect(() => {
     if (!quizId) {
@@ -105,7 +108,8 @@ function CreateSessionForm() {
         quiz_id: quiz.id,
         code: sessionCode,
         status: 'lobby',
-        created_by: user.id
+        created_by: user.id,
+        time_limit_sec: timeLimit
       })
       .select()
       .single()
@@ -189,6 +193,32 @@ function CreateSessionForm() {
           <div>
             <Label className="text-sm font-medium text-gray-700">Categoría</Label>
             <Badge variant="secondary" className="ml-2">{quiz.category}</Badge>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-700">Tiempo límite por pregunta (segundos)</Label>
+            <Input
+              type="number"
+              min="5"
+              max="300"
+              value={timeInputValue}
+              onChange={(e) => {
+                const value = e.target.value;
+                setTimeInputValue(value);
+              }}
+              onBlur={() => {
+                const numValue = parseInt(timeInputValue, 10);
+                if (isNaN(numValue) || numValue < 5 || numValue > 300) {
+                  // Invalid value, reset to current valid timeLimit
+                  setTimeInputValue(timeLimit.toString());
+                } else {
+                  // Valid value, update timeLimit
+                  setTimeLimit(numValue);
+                }
+              }}
+              className="mt-1"
+            />
+            <p className="text-xs text-gray-500 mt-1">Rango: 5-300 segundos por pregunta</p>
           </div>
 
           <div className="bg-blue-50 p-4 rounded-lg">

@@ -13,6 +13,7 @@ interface Session {
   code: string
   status: string
   current_question_id: string | null
+  time_limit_sec: number
 }
 
 interface Question {
@@ -138,7 +139,7 @@ export default function GamePage() {
 
       const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
-        .select('id, code, status, current_question_id')
+        .select('id, code, status, current_question_id, time_limit_sec')
         .eq('code', code)
         .single()
 
@@ -213,15 +214,16 @@ export default function GamePage() {
       try {
         const { data: latestSession } = await supabase
           .from('sessions')
-          .select('id, status, current_question_id')
+          .select('id, status, current_question_id, time_limit_sec')
           .eq('id', session.id)
           .single()
 
         if (latestSession &&
-           (latestSession.status !== session.status || latestSession.current_question_id !== session.current_question_id)) {
+           (latestSession.status !== session.status || latestSession.current_question_id !== session.current_question_id || latestSession.time_limit_sec !== session.time_limit_sec)) {
           console.log('🚨 POLLING DETECTED CHANGE:', {
             status: {new: latestSession.status, old: session.status},
-            question_id: {new: latestSession.current_question_id, old: session.current_question_id}
+            question_id: {new: latestSession.current_question_id, old: session.current_question_id},
+            time_limit: {new: latestSession.time_limit_sec, old: session.time_limit_sec}
           })
           setSession(current => ({ ...current!, ...latestSession }))
 
@@ -333,10 +335,10 @@ export default function GamePage() {
     } else {
       console.log('Question loaded:', data.text)
       setQuestion(data)
-      setTimeRemaining(data.time_limit_sec)
+      setTimeRemaining(session!.time_limit_sec)
       setAnswered(false)
       setSelectedOption(null)
-      startTimer(data.time_limit_sec)
+      startTimer(session!.time_limit_sec)
     }
   }
 
@@ -359,10 +361,10 @@ export default function GamePage() {
     } else {
       console.log('Setting current question by ID:', data.text)
       setQuestion(data)
-      setTimeRemaining(data.time_limit_sec)
+      setTimeRemaining(session!.time_limit_sec)
       setAnswered(false)
       setSelectedOption(null)
-      startTimer(data.time_limit_sec)
+      startTimer(session!.time_limit_sec)
     }
   }
 

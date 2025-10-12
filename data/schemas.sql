@@ -49,6 +49,7 @@ CREATE TABLE sessions (
   status session_status DEFAULT 'lobby',
   current_question_id uuid REFERENCES questions(id) ON DELETE SET NULL,
   created_by uuid REFERENCES profiles(id) ON DELETE SET NULL NOT NULL,
+  time_limit_sec int DEFAULT 20,
   started_at timestamptz,
   ended_at timestamptz,
   created_at timestamptz DEFAULT now()
