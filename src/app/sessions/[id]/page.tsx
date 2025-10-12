@@ -468,25 +468,28 @@ export default function SessionControlPage() {
       for (const participant of participants) {
         console.log(`Processing participant ${participant.id}`)
 
-        // Get score with error handling
+        // Get score with error handling (get the latest score)
         const { data: scoreData, error: scoreError } = await supabase
           .from('scores')
           .select('score')
           .eq('session_id', sessionId)
           .eq('participant_id', participant.id)
+          .order('last_update', { ascending: false })
+          .limit(1)
 
-        // Some participants might not have scores yet
         if (scoreError) {
           console.error(`Score query failed for participant ${participant.id}:`, scoreError)
+          // Skip participant if score query fails
           continue
         }
 
-        console.log(`Score data for ${participant.id}:`, scoreData)
+        const latestScore = scoreData && scoreData.length > 0 ? scoreData[0].score : 0
+        console.log(`Latest score for participant ${participant.id}: ${latestScore}`)
 
-        // Get answers
+        // Use a more direct approach - count answers instead of complex joins
         const { data: answersData, error: answersError } = await supabase
           .from('answers')
-          .select('time_ms, option:options(is_correct)')
+          .select('time_ms, options!inner(is_correct)')
           .eq('session_id', sessionId)
           .eq('participant_id', participant.id)
 
@@ -495,15 +498,33 @@ export default function SessionControlPage() {
           continue
         }
 
-        console.log(`Answers data for ${participant.id}:`, answersData?.length, 'answers')
+        console.log(`Found ${answersData?.length} answers for ${participant.id}`)
 
-        if (scoreData && answersData) {
-          participantsData.push({
-            ...participant,
-            scores: scoreData,
-            answers: answersData
-          })
+        // Calculate stats manually
+        let totalAnswers = answersData ? answersData.length : 0
+        let correctAnswers = 0
+        let totalTime = 0
+
+        if (answersData && answersData.length > 0) {
+          for (const answer of answersData) {
+            if (answer.options && Array.isArray(answer.options) && answer.options[0]?.is_correct) {
+              correctAnswers++
+            }
+            totalTime += answer.time_ms || 0
+          }
         }
+
+        console.log(`Stats for ${participant.id}: ${totalAnswers} answers, ${correctAnswers} correct, ${totalTime}ms total`)
+
+        participantsData.push({
+          ...participant,
+          scores: [{ score: latestScore }],
+          answers: answersData || [],
+          total_answers: totalAnswers,
+          correct_answers: correctAnswers,
+          total_time_ms: totalTime,
+          final_score: latestScore // Use the latest score directly
+        })
       }
 
       console.log('Processed participants data:', participantsData.length)
