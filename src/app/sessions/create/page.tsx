@@ -5,10 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Play } from 'lucide-react'
+import Link from 'next/link'
 
 interface Quiz {
   id: string
@@ -120,20 +120,61 @@ function CreateSessionForm() {
     setCreating(false)
   }
 
-  if (loading) return <div className="p-6">Cargando...</div>
-  if (!quiz) return <div className="p-6">Quiz no encontrado</div>
-
-  return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" onClick={() => router.push('/quizzes')}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Volver
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">Crear Sesión de Quiz</h1>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando...</p>
         </div>
       </div>
+    )
+  }
+
+  if (!quiz) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-red-600">Quiz no encontrado</p>
+          <Link href="/quizzes">
+            <Button className="mt-4">Volver a Quizzes</Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/quizzes">
+                <Button variant="outline">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Gestionar Quizzes
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">Crear Sesión de Quiz</h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  {quiz.title} • {quiz.category}
+                </p>
+              </div>
+            </div>
+
+            <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+              Código: {generateSessionCode()} (preview)
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto p-6">
 
       <Card>
         <CardHeader>
@@ -179,6 +220,7 @@ function CreateSessionForm() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }
