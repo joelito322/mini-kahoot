@@ -298,7 +298,7 @@ export default function SessionControlPage() {
       })
       .subscribe()
 
-    // Subscribe to answers
+    // Subscribe to answers - refresh current question when new answers arrive
     supabase
       .channel('answer-updates')
       .on('postgres_changes', {
@@ -306,9 +306,16 @@ export default function SessionControlPage() {
         schema: 'public',
         table: 'answers',
         filter: `session_id=eq.${sessionId}`
-      }, () => {
-        if (currentQuestion) {
-          fetchCurrentQuestion()
+      }, (payload: unknown) => {
+        const p = payload as { new?: Record<string, unknown> }
+        console.log('Answer update received:', p?.new?.question_id, 'current question:', currentQuestion?.id)
+
+        // Only refresh if it's for the current question being displayed
+        if (p?.new?.question_id === currentQuestion?.id) {
+          console.log('Refreshing current question answers')
+          if (currentQuestion) {
+            fetchCurrentQuestionById(currentQuestion.id)
+          }
         }
       })
       .subscribe()
