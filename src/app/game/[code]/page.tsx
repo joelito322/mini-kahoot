@@ -161,10 +161,33 @@ export default function GamePage() {
             fetchCurrentQuestionById(latestSession.current_question_id)
           }
 
-          // Session ended - redirect directly to results
+          // Session ended - wait for rankings to be calculated before redirect
           if (latestSession.status === 'ended') {
-            console.log('⚠️ SESSION ENDED - Redirecting to results')
-            router.push(`/results/${session.id}`)
+            console.log('⚠️ SESSION ENDED - Waiting for rankings before redirect')
+
+            // Wait for rankings to be available, then redirect
+            const checkRankingsAndRedirect = async () => {
+              try {
+                const { data: results, error } = await supabase
+                  .from('session_results')
+                  .select('id')
+                  .eq('session_id', session.id)
+
+                if (!error && results && results.length > 0) {
+                  console.log('🎯 Rankings ready! Redirecting to results')
+                  router.push(`/results/${session.id}`)
+                } else {
+                  console.log('⏳ Waiting for rankings to be calculated...')
+                  setTimeout(checkRankingsAndRedirect, 1500)
+                }
+              } catch (err) {
+                console.error('Error checking rankings:', err)
+                // Fallback: redirect anyway after timeout
+                setTimeout(() => router.push(`/results/${session.id}`), 3000)
+              }
+            }
+
+            checkRankingsAndRedirect()
             return
           }
         }
