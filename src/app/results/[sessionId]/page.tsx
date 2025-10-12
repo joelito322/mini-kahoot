@@ -124,11 +124,13 @@ export default function SessionResultsPage() {
           id: result.session_participants.id,
           alias: result.session_participants.alias,
           final_position: result.final_position,
-          final_score: result.final_score,
-          total_answers: result.total_answers,
-          correct_answers: result.correct_answers,
-          total_time_ms: result.total_time_ms
+          final_score: result.final_score || 0,
+          total_answers: result.total_answers || 0,
+          correct_answers: result.correct_answers || 0,
+          total_time_ms: result.total_time_ms || 0
         }
+
+        console.log(`Participant ${participant.alias}: score ${participant.final_score}, answers ${participant.total_answers}, correct ${participant.correct_answers}`)
 
         // Check if this is current participant
         // Priority: participant ID from sessionStorage > auth user ID
