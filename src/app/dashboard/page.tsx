@@ -40,7 +40,7 @@ export default function Dashboard() {
           // Get stats for supervisor
           if (profile.role === 'supervisor') {
             const [quizzesResult, sessionsResult] = await Promise.all([
-              supabase.from('quizzes').select('id', { count: 'exact' }).eq('created_by', user.id),
+              supabase.from('quizzes').select('id', { count: 'exact' }).eq('created_by', user.id).eq('archived', false),
               supabase.from('sessions').select('status', { count: 'exact' }).eq('created_by', user.id)
             ])
 

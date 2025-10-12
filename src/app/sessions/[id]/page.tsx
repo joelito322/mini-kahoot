@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Play, Pause, Square, Users, Clock, Trophy } from 'lucide-react'
+import Link from 'next/link'
 
 interface Session {
   id: string
@@ -654,24 +655,69 @@ export default function SessionControlPage() {
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
 
-  if (loading || !session || !isHost) return <div className="p-6">Cargando...</div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando sala de control...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-red-600">Sesión no encontrada</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isHost) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-red-600">No tienes permisos para controlar esta sesión</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" onClick={() => router.push('/sessions')}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Volver
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">Sala de Control - Sesión {session.code}</h1>
-          <p className="text-gray-600">{session.quiz?.title}</p>
-          <div className="flex items-center gap-2 mt-2">
-            {getStatusBadge(session.status)}
-            <Badge variant="outline">{session.quiz?.questions.length} preguntas</Badge>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/sessions">
+                <Button variant="outline">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Gestionar Sesiones
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">Sala de Control</h1>
+                <p className="text-sm text-gray-600 mt-1">Sesión {session.code} • {session.quiz?.title}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  {getStatusBadge(session.status)}
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    {session.quiz?.questions?.length || 0} preguntas
+                  </Badge>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto p-6">
 
       <div className="grid gap-6 md:grid-cols-3">
         {/* Participants */}
@@ -793,6 +839,7 @@ export default function SessionControlPage() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   )
