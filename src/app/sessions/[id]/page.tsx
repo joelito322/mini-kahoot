@@ -79,21 +79,21 @@ export default function SessionControlPage() {
     }
   }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Polling backup for participants updates when realtime fails
+  // Polling agresivo ultra frecuente para participantes conectados - mismo que en game
   useEffect(() => {
-    if (!session?.id || session?.status !== 'running') return
+    if (!session?.id) return
 
-    console.log('Setting up polling backup for participants during session')
+    console.log('Setting up ultra-aggressive polling for participants in control room')
     const polling = setInterval(async () => {
       try {
         await fetchParticipants()
       } catch (error) {
-        console.error('Polling error:', error)
+        console.error('Ultra polling error:', error)
       }
-    }, 3000)
+    }, 500) // Ultra frequent polling: 500ms
 
     return () => clearInterval(polling)
-  }, [session?.id, session?.status]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [session?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchSession = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -743,7 +743,7 @@ export default function SessionControlPage() {
       <div className="max-w-6xl mx-auto p-6">
 
       <div className="grid gap-6 md:grid-cols-3">
-        {/* Participants */}
+        {/* Participants - mismo estilo que en game page */}
         <Card className="md:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -753,15 +753,70 @@ export default function SessionControlPage() {
           </CardHeader>
           <CardContent>
             {participants.length === 0 ? (
-              <p className="text-gray-500 text-sm">No hay participantes aún</p>
+              <div className="text-center py-8">
+                <Users className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                <p className="text-gray-500">Nadie se ha conectado aún</p>
+              </div>
             ) : (
-              <div className="space-y-2">
-                {participants.map((participant) => (
-                  <div key={participant.id} className="flex justify-between items-center">
-                    <span className="text-sm">{participant.alias}</span>
-                    <Badge variant="outline">{participant.score} pts</Badge>
-                  </div>
-                ))}
+              <div className="grid gap-3">
+                {participants.map((participant, index) => {
+                  const colors = [
+                    'from-blue-500 to-blue-600',
+                    'from-green-500 to-green-600',
+                    'from-purple-500 to-purple-600',
+                    'from-red-500 to-red-600',
+                    'from-indigo-500 to-indigo-600',
+                    'from-pink-500 to-pink-600',
+                    'from-teal-500 to-teal-600',
+                    'from-orange-500 to-orange-600'
+                  ]
+                  const colorClass = colors[index % colors.length]
+
+                  return (
+                    <Card
+                      key={participant.id}
+                      className="border-0 shadow-md transition-all duration-300 hover:shadow-lg bg-white"
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          {/* Avatar con inicial */}
+                          <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${colorClass}
+                            flex items-center justify-center text-white font-bold shadow-lg`}>
+                            {participant.alias.charAt(0).toUpperCase()}
+                          </div>
+
+                          {/* Información del participante */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold truncate text-gray-800">
+                                {participant.alias}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              <span className="text-xs text-green-600 font-medium">Conectado</span>
+                              <Badge variant="outline" className="text-xs ml-auto">
+                                {participant.score} pts
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Mensaje animado cuando hay pocos participantes - mismo que en game */}
+            {participants.length > 0 && participants.length < 3 && (
+              <div className="text-center py-4 border-t border-gray-100 mt-4">
+                <div className="text-sm text-gray-500 mb-1">
+                  💡 Cuantos más participantes, más divertido será el quiz!
+                </div>
+                <div className="text-xs text-gray-400">
+                  Comparta el código: <span className="font-mono font-bold text-gray-700">{session.code}</span>
+                </div>
               </div>
             )}
           </CardContent>
