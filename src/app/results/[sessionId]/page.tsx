@@ -228,7 +228,7 @@ export default function SessionResultsPage() {
                 </div>
                 <div className="bg-white/20 rounded-lg px-4 py-2">
                   <div className="text-xs font-medium uppercase tracking-wide">Participantes</div>
-                  <div className="text-lg font-bold">{participants.length}</div>
+                  <div className="text-2xl font-bold">{participants.length}</div>
                 </div>
               </div>
               <div className="mt-4 text-sm opacity-90">
