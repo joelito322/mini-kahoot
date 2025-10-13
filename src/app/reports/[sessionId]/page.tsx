@@ -112,15 +112,18 @@ export default function SessionReportPage() {
         return
       }
 
-      // Process participants data using same logic as results page
-      const processedParticipants: ParticipantStats[] = resultsData?.map((result: any) => ({
-        id: result.session_participants.id,
-        alias: result.session_participants.alias,
-        totalScore: result.final_score,
-        totalTime: result.total_time_ms,
-        correctAnswers: result.correct_answers,
-        averageTimePerQuestion: result.correct_answers > 0 ? Math.round(result.total_time_ms / result.correct_answers) : 0
-      })) || []
+      console.log('REPORT: Results data received:', resultsData, resultsError)
+
+      // If no results in session_results table, use fallback calculation
+      const processedParticipants: ParticipantStats[] = resultsData && resultsData.length > 0 ?
+        resultsData.map((result: any) => ({
+          id: result.session_participants.id,
+          alias: result.session_participants.alias,
+          totalScore: result.final_score,
+          totalTime: result.total_time_ms,
+          correctAnswers: result.correct_answers,
+          averageTimePerQuestion: result.correct_answers > 0 ? Math.round(result.total_time_ms / result.correct_answers) : 0
+        })) : []
 
       // 3. Get question statistics
       const [{ data: answers, error: answersError }, { data: questions }] = await Promise.all([
