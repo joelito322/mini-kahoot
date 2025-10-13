@@ -193,8 +193,7 @@ export default function EditQuizPage() {
       const { error: questionError } = await supabase
         .from('questions')
         .update({
-          text: questionForm.text,
-          time_limit_sec: questionForm.time_limit_sec
+          text: questionForm.text
         })
         .eq('id', editingQuestion.id)
 
@@ -239,8 +238,7 @@ export default function EditQuizPage() {
         .insert({
           quiz_id: quizId,
           text: questionForm.text,
-          order_index: nextOrder,
-          time_limit_sec: questionForm.time_limit_sec
+          order_index: nextOrder
         })
         .select()
         .single()
@@ -452,18 +450,6 @@ export default function EditQuizPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="time-limit">Tiempo límite (segundos)</Label>
-                    <Input
-                      id="time-limit"
-                      type="number"
-                      min="5"
-                      max="120"
-                      value={questionForm.time_limit_sec}
-                      onChange={(e) => setQuestionForm({ ...questionForm, time_limit_sec: parseInt(e.target.value) || 20 })}
-                    />
-                  </div>
-
-                  <div>
                     <Label>Opciones (márquela correcta)</Label>
                     <div className="space-y-3 mt-2">
                       {questionForm.options.map((option, _index) => (
@@ -513,11 +499,8 @@ export default function EditQuizPage() {
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <CardTitle className="text-lg font-semibold text-gray-800 mb-2">
+                    <CardTitle className="text-lg font-semibold text-gray-800 mb-2">
                         Pregunta {index + 1}
-                        <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">
-                          {question.time_limit_sec}s
-                        </Badge>
                       </CardTitle>
                       <p className="text-sm text-gray-700 line-clamp-3">{question.text}</p>
                     </div>
