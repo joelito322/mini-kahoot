@@ -603,12 +603,12 @@ export default function SessionControlPage() {
         }
       })
 
-      // Sort by score DESC, then by total time ASC for ties
+      // Sort by score DESC, then by total time ASC for ties (faster = better)
       rankings.sort((a, b) => {
         if (a.final_score !== b.final_score) {
           return b.final_score - a.final_score
         }
-        return a.total_time_ms - b.total_time_ms
+        return b.total_time_ms - a.total_time_ms  // ✅ Menos tiempo = Mejor posición
       })
 
       // Assign positions and save
