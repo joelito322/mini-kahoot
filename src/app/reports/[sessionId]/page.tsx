@@ -414,7 +414,7 @@ export default function SessionReportPage() {
                     </div>
 
                     <div className="flex justify-between text-sm">
-                      <span>Tiempo promedio incorrecto</span>
+                      <span>Tiempo promedio de respuestas correctas</span>
                       <span>{formatTime(question.averageTime)}</span>
                     </div>
                   </div>
