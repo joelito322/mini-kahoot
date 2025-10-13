@@ -69,6 +69,8 @@ export default function SessionControlPage() {
   const [loading, setLoading] = useState(true)
   const [isHost, setIsHost] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [rankingsCalculated, setRankingsCalculated] = useState(false)
+  const [calculatingRankings, setCalculatingRankings] = useState(false)
 
   useEffect(() => {
     fetchSession()
@@ -643,6 +645,8 @@ export default function SessionControlPage() {
     if (confirm('¿Estás seguro de que quieres finalizar la sesión?')) {
       console.log('Ending session and calculating rankings...')
 
+      setCalculatingRankings(true) // Mostrar spinner
+
       const { error: sessionError } = await supabase
         .from('sessions')
         .update({ status: 'ended', current_question_id: null, ended_at: new Date().toISOString() })
@@ -651,6 +655,7 @@ export default function SessionControlPage() {
       if (sessionError) {
         console.error('Error updating session:', sessionError)
         alert('Error finalizando sesión')
+        setCalculatingRankings(false)
         return
       }
 
@@ -660,6 +665,9 @@ export default function SessionControlPage() {
       console.log('Starting rankings calculation...')
       await calculateAndSaveFinalRankings()
       console.log('Rankings calculation completed')
+
+      setCalculatingRankings(false)
+      setRankingsCalculated(true) // Rankings listos
     }
   }
 
@@ -936,9 +944,21 @@ export default function SessionControlPage() {
               <div className="text-center py-8">
                 <h3 className="text-xl font-semibold text-green-600 mb-4">¡Sesión Finalizada!</h3>
                 <p className="text-gray-600 mb-4">Todos los participantes han completado el quiz</p>
-              <Button onClick={() => router.push(`/reports/${sessionId}`)}>
-                Ver Reportes
-              </Button>
+                {calculatingRankings ? (
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span className="text-blue-600">Calculando rankings...</span>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => router.push(`/reports/${sessionId}`)}
+                    disabled={!rankingsCalculated}
+                    size="lg"
+                  >
+                    <Trophy className="w-5 h-5 mr-2" />
+                    Ver Reportes {!rankingsCalculated && '(Procesando...)'}
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
