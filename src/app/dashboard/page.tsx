@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Brain, Trophy, Users, BookOpen, PlayCircle, BarChart3, Target, Calendar, Zap } from 'lucide-react'
+import { ArrowLeft, Brain, Trophy, Users, BookOpen, PlayCircle, BarChart3, Target, Calendar, Zap, LogOut } from 'lucide-react'
 import Link from 'next/link'
 
 interface Stats {
@@ -19,6 +19,13 @@ export default function Dashboard() {
   const [user, setUser] = useState<{id: string; email?: string; role?: string} | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut()
+    if (!error) {
+      window.location.href = '/'
+    }
+  }
 
   useEffect(() => {
     const getUserAndStats = async () => {
@@ -115,9 +122,17 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <Badge variant={isSupervisor ? "default" : "secondary"} className="px-3 py-1">
-              {isSupervisor ? '👨‍🏫 Supervisor' : '👤 Agente'}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant={isSupervisor ? "default" : "secondary"} className="px-3 py-1">
+                {isSupervisor ? '👨‍🏫 Supervisor' : '👤 Agente'}
+              </Badge>
+              {isSupervisor && (
+                <Button size="sm" variant="outline" onClick={handleSignOut}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Cerrar Sesión
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
