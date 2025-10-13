@@ -64,13 +64,13 @@ export default function SessionReportPage() {
 
   const fetchReportData = async () => {
     try {
-      // 1. Get session basic info
+      // 1. Get session basic info with quiz
       const { data: sessionData } = await supabase
         .from('sessions')
         .select(`
           id,
           code,
-          quiz_id
+          quiz:quizzes(id, title)
         `)
         .eq('id', sessionId)
         .single()
@@ -81,28 +81,52 @@ export default function SessionReportPage() {
         return
       }
 
-      // Get quiz info
-      const { data: quizData } = await supabase
-        .from('quizzes')
-        .select('id, title')
-        .eq('id', sessionData.quiz_id)
-        .single()
-
+      // Fix quiz type issue
       const processedSession: Session = {
-        id: sessionData.id,
-        code: sessionData.code,
-        quiz: quizData || null
+        ...sessionData,
+        quiz: Array.isArray(sessionData.quiz) ? sessionData.quiz[0] : sessionData.quiz
       }
       setSession(processedSession)
 
-      // 2. Get all data separately to avoid complex joins
-      const [{ data: answers, error: answersError }, { data: scores }, { data: questions }, { data: participants }] =
-        await Promise.all([
-          supabase.from('answers').select('time_ms, question_id, participant_id, option_id').eq('session_id', sessionId),
-          supabase.from('scores').select('participant_id, score').eq('session_id', sessionId),
-          supabase.from('questions').select('id, text, time_limit_sec').eq('quiz_id', processedSession.quiz?.id),
-          supabase.from('session_participants').select('id, alias, user_id').eq('session_id', sessionId)
-        ])
+      // 2. Get results data using same query as results page
+      const { data: resultsData, error: resultsError } = await supabase
+        .from('session_results')
+        .select(`
+          final_position,
+          final_score,
+          total_answers,
+          correct_answers,
+          total_time_ms,
+          session_participants!inner(
+            id,
+            alias,
+            user_id
+          )
+        `)
+        .eq('session_id', sessionId)
+        .order('final_position', { ascending: true })
+
+      if (resultsError) {
+        console.error('Error fetching results:', resultsError)
+        alert('Error cargando resultados: ' + resultsError.message)
+        return
+      }
+
+      // Process participants data using same logic as results page
+      const processedParticipants: ParticipantStats[] = resultsData?.map((result: any) => ({
+        id: result.session_participants.id,
+        alias: result.session_participants.alias,
+        totalScore: result.final_score,
+        totalTime: result.total_time_ms,
+        correctAnswers: result.correct_answers,
+        averageTimePerQuestion: result.correct_answers > 0 ? Math.round(result.total_time_ms / result.correct_answers) : 0
+      })) || []
+
+      // 3. Get question statistics
+      const [{ data: answers, error: answersError }, { data: questions }] = await Promise.all([
+        supabase.from('answers').select('time_ms, question_id, participant_id, option_id').eq('session_id', sessionId),
+        supabase.from('questions').select('id, text, time_limit_sec').eq('quiz_id', processedSession.quiz?.id)
+      ])
 
       if (answersError) {
         console.error('Error fetching answers:', answersError)
@@ -118,49 +142,18 @@ export default function SessionReportPage() {
         { data: [] }
 
       // Create lookup maps
-      const scoreMap = new Map(scores?.map(s => [s.participant_id, s.score]) || [])
       const questionMapById = new Map(quizQuestions.map(q => [q.id, q]))
-      const participantMapById = new Map(participants?.map(p => [p.id, p]) || [])
       const optionMapById = new Map(allOptions?.map(o => [o.id, o.is_correct]) || [])
 
-      console.log('Report data:', {
-        answers: answers?.length,
-        scores: scores?.length,
-        questions: quizQuestions.length,
-        participants: participants?.length,
-        options: allOptions?.length
-      })
-
-      // Process answers to calculate stats
-      const participantStatsMap = new Map<string, ParticipantStats>()
+      // Process question stats
       const questionStatsMap = new Map<string, QuestionStats>()
 
       answers?.forEach(answer => {
-        const participant = participantMapById.get(answer.participant_id)
         const question = questionMapById.get(answer.question_id)
         const isCorrect = optionMapById.get(answer.option_id) || false
 
-        if (!participant || !question) return
+        if (!question) return
 
-        // Participant stats
-        if (!participantStatsMap.has(answer.participant_id)) {
-          participantStatsMap.set(answer.participant_id, {
-            id: answer.participant_id,
-            alias: participant.alias,
-            totalScore: 0, // Will be calculated later
-            totalTime: 0,
-            correctAnswers: 0,
-            averageTimePerQuestion: 0
-          })
-        }
-
-        const participantStats = participantStatsMap.get(answer.participant_id)!
-        if (isCorrect) {
-          participantStats.correctAnswers += 1
-          participantStats.totalTime += answer.time_ms || 0
-        }
-
-        // Question stats
         if (!questionStatsMap.has(answer.question_id)) {
           questionStatsMap.set(answer.question_id, {
             questionId: answer.question_id,
@@ -180,21 +173,6 @@ export default function SessionReportPage() {
         }
       })
 
-      // Calculate final percentages and rankings
-      const participantsArray = Array.from(participantStatsMap.values())
-        .map(p => ({
-          ...p,
-          totalScore: p.correctAnswers * 100, // 100 points per correct answer
-          averageTimePerQuestion: p.correctAnswers > 0 ? Math.round(p.totalTime / p.correctAnswers) : 0
-        }))
-        .sort((a, b) => {
-          // First by score desc, then by time asc
-          if (a.totalScore !== b.totalScore) {
-            return b.totalScore - a.totalScore
-          }
-          return a.totalTime - b.totalTime
-        })
-
       const questionsArray = Array.from(questionStatsMap.values())
         .map(q => ({
           ...q,
@@ -204,16 +182,16 @@ export default function SessionReportPage() {
         .sort((a, b) => a.questionText.localeCompare(b.questionText))
 
       // Calculate overall stats
-      const totalScore = participantsArray.reduce((sum, p) => sum + p.totalScore, 0)
-      const totalTime = participantsArray.reduce((sum, p) => sum + p.totalTime, 0)
-      const totalCorrect = participantsArray.reduce((sum, p) => sum + p.correctAnswers, 0)
+      const totalScore = processedParticipants.reduce((sum, p) => sum + p.totalScore, 0)
+      const totalTime = processedParticipants.reduce((sum, p) => sum + p.totalTime, 0)
+      const totalCorrect = processedParticipants.reduce((sum, p) => sum + p.correctAnswers, 0)
 
-      setParticipants(participantsArray)
+      setParticipants(processedParticipants)
       setQuestions(questionsArray)
       setOverallStats({
-        totalParticipants: participantsArray.length,
+        totalParticipants: processedParticipants.length,
         totalQuestions: questionsArray.length,
-        averageScore: participantsArray.length > 0 ? Math.round(totalScore / participantsArray.length) : 0,
+        averageScore: processedParticipants.length > 0 ? Math.round(totalScore / processedParticipants.length) : 0,
         averageTimePerQuestion: totalCorrect > 0 ? Math.round(totalTime / totalCorrect) : 0
       })
 
