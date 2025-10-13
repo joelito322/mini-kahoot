@@ -170,6 +170,22 @@ export default function SessionControlPage() {
 
     setSession(processedData)
     setIsHost(true)
+
+    // Check if rankings are already calculated for this session
+    const { data: rankingsData } = await supabase
+      .from('session_results')
+      .select('id', { count: 'exact' })
+      .eq('session_id', sessionId)
+      .limit(1)
+
+    if (rankingsData && rankingsData.length > 0) {
+      setRankingsCalculated(true)
+      console.log('✅ Rankings already calculated for session:', sessionId)
+    } else {
+      setRankingsCalculated(false)
+      console.log('❌ No rankings calculated yet for session:', sessionId)
+    }
+
     fetchParticipants()
     fetchCurrentQuestion()
     setLoading(false)
