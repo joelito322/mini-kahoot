@@ -613,6 +613,41 @@ export default function GamePage() {
     return `${myRank}º lugar`
   }
 
+  const handleLeaveSession = async () => {
+    if (!myParticipation || !session) return
+
+    console.log('Leaving session:', session.id, 'participant:', myParticipation.id)
+
+    try {
+      // Delete the participation record from database
+      const { error } = await supabase
+        .from('session_participants')
+        .delete()
+        .eq('id', myParticipation.id)
+        .eq('session_id', session.id)
+
+      if (error) {
+        console.error('Error leaving session:', error)
+        alert('Error al salir de la sesión: ' + error.message)
+        return
+      }
+
+      console.log('Successfully left session')
+
+      // Clear sessionStorage
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('participant_id')
+      }
+
+      // Redirect to home
+      router.push('/')
+
+    } catch (error) {
+      console.error('Unexpected error leaving session:', error)
+      alert('Error inesperado al salir de la sesión')
+    }
+  }
+
   const getFinalRankingText = () => {
     if (!finalRanking) return 'Cargando posición...'
 
@@ -636,7 +671,12 @@ export default function GamePage() {
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/')}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLeaveSession}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0"
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Salir
             </Button>
