@@ -291,7 +291,7 @@ export default function SessionResultsPage() {
                     <Zap className="w-6 h-6 mx-auto mb-1 text-purple-600" />
                     <div className="font-semibold text-purple-600">Velocidad</div>
                     <div className="text-lg font-bold">{formatTime(myResult.total_time_ms)}</div>
-                    <div className="text-xs text-gray-600">tiempo total</div>
+                    <div className="text-xs text-gray-600">tiempo de respuestas correctas</div>
                   </div>
 
                   <div className="bg-white/50 rounded-lg p-3">
