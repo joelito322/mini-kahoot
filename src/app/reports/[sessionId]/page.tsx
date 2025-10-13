@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Trophy, Clock, Target, Medal, Users, TrendingUp, Zap } from 'lucide-react'
+import { ArrowLeft, Trophy, Clock, Target, Medal, Users, TrendingUp, Zap, Download } from 'lucide-react'
 
 interface Session {
   id: string
@@ -221,6 +221,63 @@ export default function SessionReportPage() {
     return `${seconds}s`
   }
 
+  const exportToCSV = () => {
+    try {
+      // Generate filename with session code and date
+      const now = new Date()
+      const dateStr = now.toISOString().split('T')[0]
+      const filename = `reporte-${session?.code || sessionId}-${dateStr}.csv`
+
+      // Create CSV content
+      let csvContent = ''
+
+      // Section 1: Session Info
+      csvContent += '=== INFORMACIÓN DE SESIÓN ===\n'
+      csvContent += `Sala,Código,Quiz,Fecha Generación\n`
+      csvContent += `"${session?.code || 'N/A'}","${sessionId}","${session?.quiz?.title || 'N/A'}","${now.toLocaleDateString('es-ES')}"\n\n`
+
+      // Section 2: Overall Statistics
+      csvContent += '=== ESTADÍSTICAS GENERALES ===\n'
+      csvContent += `Total Participantes,Total Preguntas,Puntaje Promedio,Tiempo Promedio\n`
+      csvContent += `${overallStats.totalParticipants},${overallStats.totalQuestions},${overallStats.averageScore},"${formatTime(overallStats.averageTimePerQuestion)}"\n\n`
+
+      // Section 3: Final Ranking
+      csvContent += '=== RANKING FINAL ===\n'
+      csvContent += `Posición,Participante,Puntos Totales,Respuestas Correctas,Total Preguntas,Avg. Tiempo por Pregunta,Tiempo Total\n`
+
+      participants.forEach((participant, index) => {
+        const position = index + 1
+        csvContent += `${position},"${participant.alias}",${participant.totalScore},${participant.correctAnswers},${participant.totalTime ? Math.round(participant.totalTime / participant.averageTimePerQuestion) : 0},"${formatTime(participant.averageTimePerQuestion)}","${formatTime(participant.totalTime)}"\n`
+      })
+
+      csvContent += '\n=== ESTADÍSTICAS POR PREGUNTA ===\n'
+      csvContent += `Pregunta,Tiempo Límite,Respuestas Correctas,Total Respuestas,Porcentaje Correcto,Tiempo Promedio\n`
+
+      questions.forEach((question, index) => {
+        const questionNumber = index + 1
+        const timeLimit = question.averageTime ? Math.round(question.averageTime / 1000) : 0 // Estimate from avg time
+        csvContent += `"${questionNumber}. ${question.questionText.replace(/"/g, '""')}",${timeLimit}s,${question.correctAnswers},${question.totalAnswers},${question.correctPercentage}%,${formatTime(question.averageTime)}\n`
+      })
+
+      // Download CSV
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', filename)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
+    } catch (error) {
+      console.error('Error exporting CSV:', error)
+      alert('Error al exportar CSV')
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -411,8 +468,18 @@ export default function SessionReportPage() {
           </CardContent>
         </Card>
 
-        {/* Action Button */}
-        <div className="flex justify-center">
+        {/* Action Buttons */}
+        <div className="flex justify-center gap-4">
+          <Button
+            onClick={exportToCSV}
+            variant="outline"
+            size="lg"
+            disabled={participants.length === 0}
+            className="bg-green-50 hover:bg-green-100 border-green-300"
+          >
+            <Download className="w-5 h-5 mr-2" />
+            Exportar CSV
+          </Button>
           <Button onClick={() => router.push('/dashboard')} size="lg">
             Nuevo Juego
           </Button>
