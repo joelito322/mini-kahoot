@@ -79,20 +79,26 @@ export default function SessionControlPage() {
     }
   }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Polling agresivo ultra frecuente para participantes conectados - mismo que en game
+  // Polling ULTRA AGRESIVO para participantes - igual que en game: 200ms
   useEffect(() => {
     if (!session?.id) return
 
-    console.log('Setting up ultra-aggressive polling for participants in control room')
-    const polling = setInterval(async () => {
+    console.log('🚀 CONTROL ROOM: Starting ULTRA-AGGRESSIVE PARTICIPANT POLLING (200ms) for session:', session.id)
+
+    const participantPolling = setInterval(async () => {
       try {
         await fetchParticipants()
       } catch (error) {
-        console.error('Ultra polling error:', error)
+        console.error('❌ CONTROL ROOM: Ultra participant polling error:', error)
       }
-    }, 500) // Ultra frequent polling: 500ms
+    }, 200) // ULTRA FAST POLLING: 200ms - Same as game
 
-    return () => clearInterval(polling)
+    console.log('💥 CONTROL ROOM: Participant polling started with 200ms interval')
+
+    return () => {
+      console.log('🛑 CONTROL ROOM: Stopping ultra participant polling')
+      clearInterval(participantPolling)
+    }
   }, [session?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchSession = async () => {
@@ -272,17 +278,21 @@ export default function SessionControlPage() {
       })
       .subscribe()
 
-    // Subscribe to new participant joins
+    // Subscribe to participant changes (joins and leaves)
     supabase
-      .channel('participant-joins')
+      .channel('participant-changes')
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*', // CATCH ALL changes: INSERT, UPDATE, DELETE
         schema: 'public',
         table: 'session_participants',
         filter: `session_id=eq.${sessionId}`
       }, (payload: unknown) => {
-        const p = payload as { new?: Record<string, unknown> }
-        console.log('New participant joined:', p.new?.alias)
+        const p = payload as any
+        if (p.eventType === 'INSERT') {
+          console.log('🎉 New participant joined:', p.new?.alias)
+        } else if (p.eventType === 'DELETE') {
+          console.log('👋 Participant left:', p.old?.alias)
+        }
         fetchParticipants()
       })
       .subscribe()

@@ -218,18 +218,37 @@ export default function GamePage() {
     // Removed realtime cleanup
   }, [code, router])
 
+  // Polling ULTRA AGRESIVO para participantes - cada 200ms para detectar desconexiones instantáneamente
+  useEffect(() => {
+    if (!session?.id) return
+
+    console.log('🚀 Starting ULTRA-AGGRESSIVE PARTICIPANT POLLING (200ms) for session:', session.id)
+
+    const participantPolling = setInterval(async () => {
+      try {
+        await fetchParticipants(session.id)
+      } catch (error) {
+        console.error('❌ Ultra participant polling error:', error)
+      }
+    }, 200) // ULTRA FAST POLLING: 200ms
+
+    console.log('💥 Participant polling started with 200ms interval')
+
+    return () => {
+      console.log('🛑 Stopping ultra participant polling')
+      clearInterval(participantPolling)
+    }
+  }, [session?.id])
+
   // Polling agresivo cuando realtime falla - ultra frecuente para mantener sincronización
   useEffect(() => {
     if (!session?.id) return
 
-    console.log('Starting ultra-aggressive polling backup for session:', session.id)
+    console.log('Starting session state polling...')
 
-    // Polling ultra frecuente: cada 500ms durante lobby, más rápido que realtime podría fallar
+    // Polling ultra frecuente: cada 1000ms para estado de sesión
     const polling = setInterval(async () => {
       try {
-        // Siempre hacer polling de participantes para detectar desconexiones
-        await fetchParticipants(session.id)
-
         const { data: latestSession } = await supabase
           .from('sessions')
           .select('id, status, current_question_id, time_limit_sec')
@@ -238,7 +257,7 @@ export default function GamePage() {
 
         if (latestSession &&
            (latestSession.status !== session.status || latestSession.current_question_id !== session.current_question_id || latestSession.time_limit_sec !== session.time_limit_sec)) {
-          console.log('🚨 ULTRA POLLING DETECTED CHANGE:', {
+          console.log('🚨 SESSION POLLING DETECTED CHANGE:', {
             status: {new: latestSession.status, old: session.status},
             question_id: {new: latestSession.current_question_id, old: session.current_question_id},
             time_limit: {new: latestSession.time_limit_sec, old: session.time_limit_sec}
@@ -293,7 +312,7 @@ export default function GamePage() {
       } catch (error) {
         console.error('Ultra polling error:', error)
       }
-    }, 500) // Ultra frequent polling: 500ms
+    }, 1000) // Slower polling for session state
 
     return () => clearInterval(polling)
   }, [session?.id, session?.status, session?.current_question_id, router])
@@ -427,15 +446,21 @@ export default function GamePage() {
       })
       .subscribe()
 
-    // Subscribe to participants updates
+    // Subscribe to participants updates (joins and leaves)
     supabase
-      .channel('game-participants-updates')
+      .channel('game-participants-changes')
       .on('postgres_changes', {
-        event: '*',
+        event: '*', // CATCH ALL changes: INSERT, UPDATE, DELETE
         schema: 'public',
         table: 'session_participants',
         filter: `session_id=eq.${sessionId}`
-      }, () => {
+      }, (payload: unknown) => {
+        const p = payload as any
+        if (p.eventType === 'INSERT') {
+          console.log('🎉 GAME: New participant joined:', p.new?.alias)
+        } else if (p.eventType === 'DELETE') {
+          console.log('👋 GAME: Participant left:', p.old?.alias)
+        }
         fetchParticipants(sessionId)
       })
       .subscribe()
