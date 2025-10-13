@@ -316,39 +316,44 @@ export default function SessionReportPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {participants.slice(0, 10).map((participant, index) => {
-                const position = index + 1
-                return (
-                  <div key={participant.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Badge variant={position <= 3 ? 'default' : 'outline'} className="w-8 h-8 p-0 flex items-center justify-center text-sm">
-                        {getRankIcon(position)}
-                      </Badge>
-                      <div>
-                        <p className="font-semibold">{participant.alias}</p>
-                        <p className="text-sm text-gray-600">
-                          {participant.totalScore} puntos • {participant.correctAnswers} correctas
-                        </p>
+              {participants.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">
+                  No hay resultados disponibles aún. Esta sesión debe terminar para mostrar los rankings.
+                </p>
+              ) : (
+                participants.slice(0, 10).map((participant, index) => {
+                  const position = index + 1
+                  return (
+                    <div key={participant.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Badge variant={position <= 3 ? 'default' : 'outline'} className="w-8 h-8 p-0 flex items-center justify-center text-sm">
+                          {getRankIcon(position)}
+                        </Badge>
+                        <div>
+                          <p className="font-semibold">{participant.alias}</p>
+                          <p className="text-sm text-gray-600">
+                            {participant.totalScore} puntos • {participant.correctAnswers} correctas
+                          </p>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="text-right">
-                      <div className="flex items-center gap-4">
-                        <div className="text-center">
-                          <Clock className="h-4 w-4 mx-auto text-gray-500" />
-                          <p className="text-sm">{formatTime(participant.averageTimePerQuestion)}</p>
-                          <p className="text-xs text-gray-500">avg/question</p>
-                        </div>
-                        <div className="text-center">
-                          <TrendingUp className="h-4 w-4 mx-auto text-gray-500" />
-                          <p className="text-sm">{participant.totalScore}</p>
-                          <p className="text-xs text-gray-500">total</p>
+                      <div className="text-right">
+                        <div className="flex items-center gap-4">
+                          <div className="text-center">
+                            <Clock className="h-4 w-4 mx-auto text-gray-500" />
+                            <p className="text-sm">{formatTime(participant.averageTimePerQuestion)}</p>
+                            <p className="text-xs text-gray-500">avg/question</p>
+                          </div>
+                          <div className="text-center">
+                            <TrendingUp className="h-4 w-4 mx-auto text-gray-500" />
+                            <p className="text-sm">{participant.totalScore}</p>
+                            <p className="text-xs text-gray-500">total</p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                }))}
             </div>
           </CardContent>
         </Card>
