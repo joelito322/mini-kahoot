@@ -227,10 +227,8 @@ export default function GamePage() {
     // Polling ultra frecuente: cada 500ms durante lobby, más rápido que realtime podría fallar
     const polling = setInterval(async () => {
       try {
-        // Durante lobby, también hacer polling de participantes para lista ultra rápida
-        if (session.status === 'lobby') {
-          await fetchParticipants(session.id)
-        }
+        // Siempre hacer polling de participantes para detectar desconexiones
+        await fetchParticipants(session.id)
 
         const { data: latestSession } = await supabase
           .from('sessions')
