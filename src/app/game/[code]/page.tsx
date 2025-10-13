@@ -468,9 +468,11 @@ export default function GamePage() {
     setTimeRemaining(duration)
     const interval = setInterval(() => {
       setTimeRemaining(prev => {
-        if (prev === null || prev <= 0) {
+        if (prev === null || prev <= 1) {
           clearInterval(interval)
-          setAnswered(true)
+          if (prev !== null) {
+            setAnswered(true)
+          }
           return 0
         }
         return prev - 1
@@ -479,7 +481,10 @@ export default function GamePage() {
   }
 
   const handleAnswerSelect = async (optionId: string) => {
-    if (answered || !question || !session || !myParticipation) return
+    if (!question || !session || !myParticipation) return
+
+    // If already answered, don't allow changing
+    if (answered) return
 
     setSelectedOption(optionId)
     setAnswered(true)
@@ -498,6 +503,11 @@ export default function GamePage() {
 
     if (error) {
       console.error('Error submitting answer:', error)
+      // If duplicate key error, answer was already submitted
+      if (error.code === '23505') {
+        console.log('Answer already submitted, keeping selection')
+        return
+      }
     } else {
       // Check if answer was correct and update score
       const { data: optionData } = await supabase
