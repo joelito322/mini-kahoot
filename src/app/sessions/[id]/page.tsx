@@ -884,18 +884,12 @@ export default function SessionControlPage() {
                 <div>
                   <h3 className="font-semibold text-lg mb-2">{currentQuestion.text}</h3>
                   <div className="grid gap-2">
-                    {currentQuestion.options.map((option) => {
-                      const responseCount = currentQuestion.answers?.filter(r => r.option_id === option.id).length || 0
-                      return (
-                        <div key={option.id} className="flex items-center justify-between p-2 border rounded">
-                          <span>{option.text}</span>
-                          <div className="flex items-center gap-2">
-                            {option.is_correct && <Trophy className="w-4 h-4 text-yellow-500" />}
-                            <Badge variant="outline">{responseCount} respuestas</Badge>
-                          </div>
-                        </div>
-                      )
-                    })}
+                    {currentQuestion.options.map((option) => (
+                      <div key={option.id} className="flex items-center justify-between p-2 border rounded">
+                        <span>{option.text}</span>
+                        {option.is_correct && <Trophy className="w-4 h-4 text-yellow-500" />}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
