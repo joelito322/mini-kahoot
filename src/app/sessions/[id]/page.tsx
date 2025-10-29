@@ -71,6 +71,105 @@ export default function SessionControlPage() {
   const [copied, setCopied] = useState(false)
   const [rankingsCalculated, setRankingsCalculated] = useState(false)
   const [calculatingRankings, setCalculatingRankings] = useState(false)
+  const [autoTransitionTime, setAutoTransitionTime] = useState<number | null>(null)
+
+  // Auto-transition countdown
+  useEffect(() => {
+    if (autoTransitionTime === null || autoTransitionTime <= 0) return
+
+    const countdown = setInterval(() => {
+      setAutoTransitionTime(prev => {
+        if (prev === null || prev <= 1) {
+          clearInterval(countdown)
+          // Auto-advance to next question or end session
+          autoAdvance()
+          return null
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(countdown)
+  }, [autoTransitionTime])
+
+  const autoAdvance = async () => {
+    // Clear auto transition
+    setAutoTransitionTime(null)
+
+    if (isLastQuestion()) {
+      await handleEndSessionInternal()
+    } else {
+      await handleNextQuestionInternal()
+    }
+  }
+
+  const handleNextQuestionInternal = async () => {
+    if (!session?.quiz?.questions) return
+
+    const currentIndex = session.quiz.questions.findIndex(q => q.id === currentQuestion?.id)
+    const nextIndex = currentIndex + 1
+
+    console.log('Next question: currentIndex', currentIndex, 'nextIndex', nextIndex, 'total questions', session.quiz.questions.length)
+
+    if (nextIndex >= session.quiz.questions.length) {
+      // End session
+      await supabase
+        .from('sessions')
+        .update({ status: 'ended', current_question_id: null, ended_at: new Date().toISOString() })
+        .eq('id', sessionId)
+      setSession(current => ({ ...current!, status: 'ended', current_question_id: null }))
+
+      // Automatically calculate rankings since this is auto-end
+      setCalculatingRankings(true)
+      await calculateAndSaveFinalRankings()
+      setCalculatingRankings(false)
+      setRankingsCalculated(true)
+    } else {
+      const nextQuestion = session.quiz.questions[nextIndex]
+      console.log('Moving to next question:', nextQuestion.id, nextQuestion.text)
+      await supabase
+        .from('sessions')
+        .update({ current_question_id: nextQuestion.id })
+        .eq('id', sessionId)
+      setSession(current => ({ ...current!, current_question_id: nextQuestion.id }))
+
+      // Fetch the next question immediately to avoid timing issues
+      fetchCurrentQuestionById(nextQuestion.id)
+    }
+
+    // Reset timer state
+    setTimeRemaining(null)
+    setAutoTransitionTime(null)
+  }
+
+  const handleEndSessionInternal = async () => {
+    console.log('Auto-ending session and calculating rankings...')
+
+    setCalculatingRankings(true) // Mostrar spinner
+
+    const { error: sessionError } = await supabase
+      .from('sessions')
+      .update({ status: 'ended', current_question_id: null, ended_at: new Date().toISOString() })
+      .eq('id', sessionId)
+
+    if (sessionError) {
+      console.error('Error updating session:', sessionError)
+      setCalculatingRankings(false)
+      return
+    }
+
+    setSession(current => ({ ...current!, status: 'ended', current_question_id: null }))
+
+    // Calculate and save final rankings
+    await calculateAndSaveFinalRankings()
+
+    setCalculatingRankings(false)
+    setRankingsCalculated(true) // Rankings listos
+
+    // Reset states
+    setTimeRemaining(null)
+    setAutoTransitionTime(null)
+  }
 
   useEffect(() => {
     fetchSession()
@@ -357,6 +456,8 @@ export default function SessionControlPage() {
       setTimeRemaining(prev => {
         if (prev === null || prev <= 0) {
           clearInterval(interval)
+          // Start auto transition countdown when timer reaches 0
+          setAutoTransitionTime(5)
           return 0
         }
         return prev - 1
@@ -401,6 +502,9 @@ export default function SessionControlPage() {
   }
 
   const handleNextQuestion = async () => {
+    // Clear any auto transition if it's happening
+    setAutoTransitionTime(null)
+
     if (!session?.quiz?.questions) return
 
     const currentIndex = session.quiz.questions.findIndex(q => q.id === currentQuestion?.id)
@@ -430,6 +534,7 @@ export default function SessionControlPage() {
   }
 
   const handlePauseSession = async () => {
+    setAutoTransitionTime(null)
     await supabase
       .from('sessions')
       .update({ status: 'paused' })
@@ -861,12 +966,20 @@ export default function SessionControlPage() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Estado Actual</span>
-              {session.status === 'running' && timeRemaining !== null && (
-                <Badge variant={timeRemaining <= 5 ? 'destructive' : 'default'} className="text-lg px-3 py-1">
-                  <Clock className="w-4 h-4 mr-1" />
-                  {timeRemaining}s
-                </Badge>
-              )}
+              <div className="flex flex-col gap-1">
+                {autoTransitionTime !== null && autoTransitionTime > 0 && (
+                  <Badge variant="destructive" className="text-lg px-3 py-1 animate-pulse">
+                    <Trophy className="w-4 h-4 mr-1" />
+                    Auto-avanzando en {autoTransitionTime}s
+                  </Badge>
+                )}
+                {session.status === 'running' && timeRemaining !== null && (
+                  <Badge variant={timeRemaining <= 5 ? 'destructive' : 'default'} className="text-lg px-3 py-1">
+                    <Clock className="w-4 h-4 mr-1" />
+                    {timeRemaining}s
+                  </Badge>
+                )}
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
